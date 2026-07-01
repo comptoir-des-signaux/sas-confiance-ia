@@ -123,7 +123,8 @@ def test_un_type_deterministe_gagne_sur_un_candidat_ner():
 
 
 def test_personne_gagne_sur_organisation_et_lieu():
-    # Ordre REQ-016 : PERSON > ORGANIZATION > LOCATION.
+    # Ordre REQ-016 : PERSON > ORGANIZATION > LOCATION sur l'empan contesté ;
+    # le débord de l'entité moins prioritaire est rogné, pas abandonné.
     texte = "Le cabinet Martin conseille la commune."
     moteur = MoteurFactice(
         [
@@ -133,7 +134,41 @@ def test_personne_gagne_sur_organisation_et_lieu():
         ]
     )
     entites = detecter(texte, moteurs=[moteur])
-    assert [e.type for e in entites] == ["PERSONNE"]
+    (sur_martin,) = [e for e in entites if e.debut <= texte.index("Martin") < e.fin]
+    assert sur_martin.type == "PERSONNE"
+    assert all(e.type in {"PERSONNE", "ORGANISATION"} for e in entites)
+
+
+def test_un_chevauchement_partiel_est_rogne_pas_rejete():
+    # REQ-001 : si un empan NER large chevauche une entité déterministe
+    # retenue, son résidu ne doit JAMAIS rester en clair : l'empan est
+    # rogné à la partie non couverte, pas écarté en bloc.
+    texte = "Contacter Marie Martin, marie.martin@exemple.fr au plus vite."
+    moteur = MoteurFactice(
+        [_entite("PERSONNE", texte, "Marie Martin, marie.martin@exemple.fr", score=0.9)]
+    )
+    entites = detecter(texte, moteurs=[moteur])
+    assert any(e.type == "EMAIL" and e.valeur == "marie.martin@exemple.fr" for e in entites)
+    debut_nom, fin_nom = texte.index("Marie Martin"), texte.index("Marie Martin") + 12
+    assert any(
+        e.type == "PERSONNE" and e.debut <= debut_nom and e.fin >= fin_nom for e in entites
+    ), f"le résidu « Marie Martin » reste en clair : {entites}"
+
+
+def test_un_chevauchement_total_reste_ecarte():
+    # Le rognage ne réintroduit pas de doublon : un candidat entièrement
+    # couvert (SIREN dans SIRET) disparaît sans résidu.
+    entites = detecter("SIRET : 824 750 004 00007.")
+    assert [e.type for e in entites] == ["FR_SIRET"]
+
+
+def test_les_positions_d_un_residu_correspondent_au_texte():
+    texte = "Voir Marie Martin, marie.martin@exemple.fr, pour suite."
+    moteur = MoteurFactice(
+        [_entite("PERSONNE", texte, "Marie Martin, marie.martin@exemple.fr", score=0.9)]
+    )
+    for entite in detecter(texte, moteurs=[moteur]):
+        assert texte[entite.debut : entite.fin] == entite.valeur
 
 
 def test_deux_moteurs_cumulent_leurs_candidats():

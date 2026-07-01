@@ -145,11 +145,55 @@ RECONNAISSEURS: list[Reconnaisseur] = [
 
 _RANG = {type_: i for i, type_ in enumerate(PRIORITE)}
 
+# Caractères de bordure retirés des résidus de rognage (jamais de l'entité
+# d'origine) : blancs et ponctuation de liaison.
+_BORDURES = " \t\n\r,;:.()!?«»\"'"
+
+
+def _rogner(entite: EntiteDetectee, retenues: list[EntiteDetectee]) -> list[EntiteDetectee]:
+    """Sous-empans de l'entité non couverts par les retenues, bordures épurées.
+
+    REQ-001 : un candidat chevauchant n'est jamais écarté en bloc, sinon son
+    résidu (« Marie Martin » dans un empan NER englobant aussi l'email déjà
+    retenu) resterait en clair dans le texte pseudonymisé.
+    """
+    libres = [(entite.debut, entite.fin)]
+    for retenue in retenues:
+        suivants = []
+        for debut, fin in libres:
+            if retenue.fin <= debut or retenue.debut >= fin:
+                suivants.append((debut, fin))
+                continue
+            if debut < retenue.debut:
+                suivants.append((debut, retenue.debut))
+            if retenue.fin < fin:
+                suivants.append((retenue.fin, fin))
+        libres = suivants
+    residus = []
+    for debut, fin in libres:
+        fragment = entite.valeur[debut - entite.debut : fin - entite.debut]
+        epure = fragment.strip(_BORDURES)
+        if not epure:
+            continue
+        debut_epure = debut + (len(fragment) - len(fragment.lstrip(_BORDURES)))
+        residus.append(
+            EntiteDetectee(
+                type=entite.type,
+                debut=debut_epure,
+                fin=debut_epure + len(epure),
+                score=entite.score,
+                valeur=epure,
+            )
+        )
+    return residus
+
 
 def _resoudre_chevauchements(candidats: list[EntiteDetectee]) -> list[EntiteDetectee]:
     """Garde, pour chaque zone du texte, l'entité la plus prioritaire (REQ-016).
 
-    À priorité égale, la plus longue puis la mieux notée l'emporte.
+    À priorité égale, la plus longue puis la mieux notée l'emporte. Une
+    entité moins prioritaire qui déborde d'une entité retenue est rognée à
+    ses parties libres (jamais rejetée en bloc, REQ-001).
     """
     ordonnes = sorted(
         candidats,
@@ -159,6 +203,8 @@ def _resoudre_chevauchements(candidats: list[EntiteDetectee]) -> list[EntiteDete
     for entite in ordonnes:
         if all(entite.fin <= r.debut or entite.debut >= r.fin for r in retenues):
             retenues.append(entite)
+        else:
+            retenues.extend(_rogner(entite, retenues))
     return sorted(retenues, key=lambda e: e.debut)
 
 
