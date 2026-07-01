@@ -91,13 +91,29 @@ réseau sortant ou avec une base URL invalide).
 
 ## 5. Vault persistant (optionnel)
 
-Par défaut le vault vit en mémoire (rien sur disque). Pour la persistance
-chiffrée (REQ-004, REQ-005) :
+Par défaut le vault vit en mémoire : rien sur disque, et tout est perdu à
+l'arrêt du processus ou du conteneur. Pour la persistance chiffrée
+(REQ-004, REQ-005), avec Docker Compose (le volume `donnees` est monté sur
+`/donnees` dans le conteneur et les deux variables sont transmises) :
 
 ```bash
-export SAS_VAULT_CHEMIN=/données/vault.sas
+export SAS_VAULT_CHEMIN=/donnees/vault.sas
 export SAS_VAULT_CLE="$(uv run python -c 'from sas_confiance_ia.vault import generer_cle; print(generer_cle().decode())')"
+docker compose up -d
 ```
 
+Vérifier après démarrage que le vault est bien persistant : redémarrer le
+conteneur et confirmer qu'un placeholder déjà émis se ré-identifie encore.
 Conserver la clé dans un gestionnaire de secrets ; la perdre rend le vault
 définitivement illisible (c'est voulu).
+
+## 6. Choix du NER à l'exécution
+
+`SAS_NER=transformers` (défaut) exige le modèle CamemBERT épinglé : présent
+dans l'image Docker, à télécharger une fois hors Docker
+(`python -m sas_confiance_ia.telechargement`). Le démarrage est **refusé**
+si le moteur demandé n'est pas chargeable : la couverture ne se dégrade
+jamais en silence. Pour un sas volontairement sans NER (couverture réduite
+aux types déterministes) : `SAS_NER=inactif`, choix journalisé. Le repli
+`SAS_NER=spacy` exige l'extra `[ner-repli-spacy]`, non embarqué dans
+l'image de référence (le moteur transformers y est déjà).

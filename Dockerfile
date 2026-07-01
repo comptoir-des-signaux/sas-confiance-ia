@@ -21,7 +21,8 @@ RUN uv venv /opt/venv --python 3.12 \
 ENV HF_HOME=/opt/modeles
 RUN /opt/venv/bin/python -m sas_confiance_ia.telechargement \
     && useradd --create-home --uid 1000 sas \
-    && chmod -R a+rX /opt/modeles
+    && chmod -R a+rX /opt/modeles \
+    && mkdir /donnees && chown sas /donnees
 
 USER sas
 ENV PATH="/opt/venv/bin:$PATH" \
