@@ -1,12 +1,13 @@
-"""Lot 6 : proxy /v1/chat/completions sur faux backend de capture.
+"""Lots 6 et 9 : proxy /v1/chat/completions sur faux backend de capture.
 
 REQ-001 : le faux backend enregistre le payload JSON exactement tel qu'il
 partirait sur le réseau ; aucune valeur détectable (types déterministes de la
-Phase 0) ne doit y figurer. La couverture s'étend aux noms et lieux avec le
-NER de la Phase 1 (Lot 9).
+Phase 0) ne doit y figurer. Avec le NER (Lot 9), la couverture s'étend au
+périmètre complet de l'oracle : noms, lieux, organisations.
 REQ-010 : stream=true est refusé explicitement.
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -76,6 +77,33 @@ def test_req_001_aucune_valeur_detectable_dans_le_payload_capture(client, backen
     assert payloads, "le faux backend n'a rien capturé"
     fuites = [valeur for _, valeur, _ in ATTENDUS if valeur in payloads]
     assert not fuites, f"valeurs présentes dans le payload sortant : {fuites}"
+
+
+@pytest.mark.ner
+def test_req_001_perimetre_complet_avec_ner(moteur_ner):
+    # Lot 9 : la non-fuite passe du périmètre déterministe au périmètre
+    # complet de l'oracle (personnes, lieux, organisations incluses).
+    # 06-canaris.md reste exclu par construction : ses identifiants
+    # indirects relèvent du juge LLM (02-AI-SPEC §4.3), pas du NER.
+    backend = BackendCapture(contenu_reponse="Réponse synthétique du modèle.")
+    application = creer_application(
+        pseudonymiseur=Pseudonymiseur(VaultMemoire(), moteurs=[moteur_ner]),
+        backend=backend,
+        modeles=["modele-de-test"],
+    )
+    client = TestClient(application)
+    oracle = json.loads((CORPUS / "valeurs-connues.json").read_text(encoding="utf-8"))
+    documents = [
+        doc for doc in oracle if not doc.startswith("_") and doc != "06-canaris.md"
+    ]
+    for doc in documents:
+        completion(client, (CORPUS / doc).read_text(encoding="utf-8"))
+    payloads = "\n".join(backend.payloads_bruts)
+    assert payloads, "le faux backend n'a rien capturé"
+    fuites = [
+        (doc, valeur) for doc in documents for valeur in oracle[doc] if valeur in payloads
+    ]
+    assert not fuites, f"valeurs de l'oracle présentes dans le payload sortant : {fuites}"
 
 
 def test_req_010_stream_est_refuse(client):

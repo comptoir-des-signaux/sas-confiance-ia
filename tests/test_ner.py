@@ -17,33 +17,18 @@ import pytest
 from sas_confiance_ia.pseudonymiseur import Pseudonymiseur
 from sas_confiance_ia.vault import VaultMemoire
 
+from .conftest import moteur_ner_disponible
+
 CORPUS = Path(__file__).parent.parent / "corpus" / "synthetique"
-
-
-def _moteur_disponible() -> bool:
-    try:
-        from sas_confiance_ia.ner import modele_transformers_present
-
-        return modele_transformers_present()
-    except ImportError:
-        return False
-
 
 pytestmark = [
     pytest.mark.ner,
     pytest.mark.skipif(
-        not _moteur_disponible(),
+        not moteur_ner_disponible(),
         reason="modèle NER absent : installer l'extra [ner] puis "
         "python -m sas_confiance_ia.telechargement",
     ),
 ]
-
-
-@pytest.fixture(scope="session")
-def moteur_ner():
-    from sas_confiance_ia.ner import creer_moteur_ner
-
-    return creer_moteur_ner()
 
 
 # Personnes de l'oracle que la couche C2 doit reconnaître (vérité terrain
