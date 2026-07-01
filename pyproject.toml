@@ -1,0 +1,43 @@
+[project]
+name = "sas-confiance-ia"
+version = "0.1.0"
+description = "Sas Confiance IA : sas de pseudonymisation avant IA (Comptoir des Signaux)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "EUPL-1.2"
+authors = [
+  { name = "Comptoir des Signaux" },
+]
+keywords = ["pseudonymisation", "rgpd", "llm", "presidio", "collectivités"]
+dependencies = [
+  "fastapi>=0.115",
+  "pydantic>=2",
+  "cryptography>=43",
+  "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "httpx>=0.27",
+  "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sas_confiance_ia"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

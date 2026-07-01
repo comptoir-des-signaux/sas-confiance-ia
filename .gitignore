@@ -1,0 +1,33 @@
+# Matière de cadrage interne (reste dans l'atelier, hors dépôt public)
+intrants/
+
+# Environnements et caches Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Secrets et configuration locale : jamais versionnés
+.env
+.env.*
+*.key
+*.pem
+secrets*
+
+# Vaults et données de travail : jamais versionnés
+*.vault
+vaults/
+data/
+
+# Journaux locaux
+*.log
+logs/
+
+# Éditeurs et OS
+.idea/
+.vscode/
+.DS_Store

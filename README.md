@@ -1,0 +1,74 @@
+# Sas Confiance IA
+
+**Le sas de pseudonymisation avant IA** : détectez les données personnelles
+françaises dans vos textes, remplacez-les par des pseudonymes, envoyez le texte
+protégé à un modèle de langage, puis ré-identifiez la réponse **en zone de
+confiance**. La table de correspondance ne quitte jamais votre infrastructure.
+
+Un commun numérique porté par [Comptoir des Signaux](https://comptoirdessignaux.fr),
+conçu pour les collectivités territoriales et la fonction publique, sous
+licence [EUPL-1.2](LICENSE).
+
+> *English summary: a French-first pseudonymization gateway for LLM usage.
+> Detects French personal data (NIR, SIRET, IBAN, names...), substitutes
+> reversible placeholders, proxies OpenAI-compatible requests, re-identifies
+> responses locally. The mapping vault never leaves your trust zone.*
+
+## Ce que le sas garantit (et ne garantit pas)
+
+Le sas **réduit** les données personnelles transmises aux modèles d'IA et rend
+ces flux **vérifiables** : des tests capturent le payload réellement envoyé et
+échouent si une valeur sensible connue y figure.
+
+Le sas **ne garantit pas** une anonymisation parfaite ni une conformité RGPD
+automatique : aucun détecteur n'atteint 100 % de rappel, la ré-identification
+par faisceau d'indices reste possible, et l'outil assiste le responsable de
+traitement sans remplacer le DPO, l'AIPD ni le registre. Ces limites sont
+documentées et mesurées, jamais masquées.
+
+## Principes
+
+1. **Local-first** : la détection, le vault et la ré-identification tournent
+   dans votre zone de confiance. Aucun appel externe pendant la pseudonymisation.
+2. **Vérifiable** : chaque invariant de sécurité est prouvé par un test
+   automatisé sur un faux backend de capture.
+3. **Français d'abord** : NIR (avec clé de contrôle, Corse incluse),
+   SIRET / SIREN (Luhn), IBAN, téléphones, puis NER français (CamemBERT).
+4. **Pédagogique** : un mode démonstration, des données 100 % synthétiques et
+   un tutoriel pensé pour la formation.
+5. **Sobre et honnête** : pseudonymisation nommée pseudonymisation ;
+   l'anonymisation irréversible est un mode, pas une promesse.
+
+## État du projet
+
+Phase 0 en cours : socle technique prouvant les invariants de sécurité
+(non-fuite, ré-identification exacte, journaux propres, vault chiffré,
+compteurs persistants, placeholders inconnus bloquants). Voir
+[`docs/specs/`](docs/specs/) pour le cadrage complet et
+[`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md) pour la feuille de route.
+
+## Démarrage (développement)
+
+```bash
+git clone https://github.com/comptoir-des-signaux/sas-confiance-ia.git
+cd sas-confiance-ia
+uv venv && uv pip install -e ".[dev]"
+uv run pytest
+```
+
+## Crédits
+
+- Les validateurs français (clé NIR avec cas Corse 2A/2B, Luhn SIREN / SIRET)
+  reprennent le travail de **Romain Bochet**
+  ([rbochet/amo-presidio](https://github.com/rbochet/amo-presidio)), réutilisé
+  avec son accord. Merci Romain.
+- Détection : [Microsoft Presidio](https://github.com/microsoft/presidio)
+  (MIT) à partir de la Phase 1.
+- Corpus de test : entièrement synthétique, voir
+  [`corpus/synthetique/`](corpus/synthetique/).
+
+## Licence
+
+[EUPL-1.2](LICENSE) : licence publique de l'Union européenne. Vous pouvez
+utiliser, modifier et redistribuer ce logiciel, y compris commercialement, à
+condition de conserver la licence sur les œuvres dérivées.
