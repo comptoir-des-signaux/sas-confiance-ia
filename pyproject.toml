@@ -14,12 +14,12 @@ dependencies = [
   "pydantic>=2",
   "cryptography>=43",
   "uvicorn>=0.30",
+  "httpx2",
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8",
-  "httpx2",
   "ruff>=0.6",
 ]
 # Couche C2 (Lot 9) : Presidio in-process (ADR-009) avec moteur transformers.

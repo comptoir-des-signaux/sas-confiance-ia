@@ -12,7 +12,7 @@ from typing import Any
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
-from .backends import Backend
+from .backends import Backend, ErreurBackend
 from .integrite import controler, normaliser_placeholders
 from .journal import Journal
 from .pseudonymiseur import Pseudonymiseur
@@ -89,7 +89,23 @@ def creer_application(
         if requete.max_tokens is not None:
             payload["max_tokens"] = requete.max_tokens
 
-        reponse = backend.completer(payload)
+        try:
+            reponse = backend.completer(payload)
+        except ErreurBackend as erreur:
+            # Le détail ne contient que le type d'erreur : jamais le message
+            # de l'usager ni la réponse du fournisseur (REQ-003).
+            journal.enregistrer(
+                requete_id=requete_id,
+                dossier_id=dossier_id,
+                backend=type(backend).__name__,
+                modele=requete.model,
+                statut="erreur_backend",
+                erreur_type=erreur.erreur_type,
+            )
+            raise HTTPException(
+                status_code=502,
+                detail=f"Backend indisponible ({erreur.erreur_type}).",
+            ) from erreur
 
         # Contrôle d'intégrité (REQ-006) : lecture tolérante des placeholders
         # altérés, blocage de la ré-identification en présence d'un inconnu.
