@@ -41,9 +41,13 @@ documentées et mesurées, jamais masquées.
 
 ## État du projet
 
-Phase 0 en cours : socle technique prouvant les invariants de sécurité
-(non-fuite, ré-identification exacte, journaux propres, vault chiffré,
-compteurs persistants, placeholders inconnus bloquants). Voir
+**Phase 0 achevée** : le socle technique prouve les invariants de sécurité par
+59 tests automatisés sur faux backend de capture : non-fuite des valeurs
+détectées (REQ-001), ré-identification exacte (REQ-002), journaux sans donnée
+personnelle (REQ-003), vault chiffré au repos (REQ-004), compteurs persistants
+(REQ-005), placeholders inconnus bloquants (REQ-006), streaming refusé
+(REQ-010). Prochaine étape : NER français CamemBERT, Docker et premiers
+backends réels (Phase 1). Voir
 [`docs/specs/`](docs/specs/) pour le cadrage complet et
 [`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md) pour la feuille de route.
 
