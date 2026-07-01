@@ -82,9 +82,14 @@ uv run pytest            # les tests NER s'exécutent dès que le modèle est pr
 ```
 
 Repli léger sans transformers (machine modeste) : installer l'extra
-`[ner-repli-spacy]` (spaCy `fr_core_news_lg`) et créer le moteur avec
-`creer_moteur_ner(moteur="spacy")`. La couverture est moindre que
-CamemBERT ; la mesure publiée fait foi.
+`[ner-repli-spacy]` (spaCy `fr_core_news_lg`) et lancer avec
+`SAS_NER=spacy`. La couverture est moindre que CamemBERT ; la mesure
+publiée fait foi.
+
+Au lancement du proxy, le NER est actif par défaut et **fail-closed** : si
+le moteur demandé n'est pas chargeable, le sas refuse de démarrer plutôt
+que de tourner silencieusement avec une couverture réduite. Un sas sans
+NER se choisit explicitement (`SAS_NER=inactif`).
 
 ## Crédits
 
