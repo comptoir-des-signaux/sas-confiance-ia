@@ -97,6 +97,18 @@ def test_erreur_reseau():
     assert exc.value.erreur_type == "ConnectError"
 
 
+def test_contenu_null_est_une_erreur_de_format():
+    # Cas standard d'une réponse à tool_calls : content vaut null. Le sas ne
+    # gère pas les outils : c'est une ErreurBackend propre (502 journalisé),
+    # jamais un None qui traverse et casse le contrôle d'intégrité en 500.
+    corps = reponse_openai()
+    corps["choices"][0]["message"]["content"] = None
+    backend = backend_sur(httpx2.Response(200, json=corps))
+    with pytest.raises(ErreurBackend) as exc:
+        backend.completer(PAYLOAD)
+    assert exc.value.erreur_type == "FormatReponseInvalide"
+
+
 def test_reponse_hors_format_openai():
     backend = backend_sur(httpx2.Response(200, json={"inattendu": True}))
     with pytest.raises(ErreurBackend) as exc:

@@ -105,6 +105,10 @@ class BackendOpenAICompatible:
             raise ErreurBackend(
                 "FormatReponseInvalide", "réponse JSON hors format OpenAI"
             ) from exc
+        if not isinstance(contenu, str):
+            # content: null (réponse à tool_calls par exemple) : le sas ne
+            # gère pas les outils, un None casserait l'intégrité en aval.
+            raise ErreurBackend("FormatReponseInvalide", "contenu de réponse non textuel")
         return ReponseBackend(
             contenu=contenu, modele=corps.get("model", payload.get("model", ""))
         )
