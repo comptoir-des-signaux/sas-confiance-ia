@@ -1,0 +1,14 @@
+# Rien de local, de confidentiel ni d'inutile dans le contexte de build.
+.git
+.github
+.venv
+.pytest_cache
+.ruff_cache
+.claude
+intrants/
+docs/
+tests/
+corpus/
+*.egg-info
+__pycache__
+.env

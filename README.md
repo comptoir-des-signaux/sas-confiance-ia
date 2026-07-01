@@ -41,15 +41,21 @@ documentées et mesurées, jamais masquées.
 
 ## État du projet
 
-**Phase 0 achevée** : le socle technique prouve les invariants de sécurité par
-59 tests automatisés sur faux backend de capture : non-fuite des valeurs
-détectées (REQ-001), ré-identification exacte (REQ-002), journaux sans donnée
-personnelle (REQ-003), vault chiffré au repos (REQ-004), compteurs persistants
-(REQ-005), placeholders inconnus bloquants (REQ-006), streaming refusé
-(REQ-010). Prochaine étape : NER français CamemBERT, Docker et premiers
-backends réels (Phase 1). Voir
+**Phase 1 en cours (lots 9 et 10 livrés)** : plus de 100 tests automatisés
+prouvent les invariants de sécurité sur faux backend de capture : non-fuite
+des valeurs détectées, désormais au périmètre complet noms / lieux /
+organisations inclus (REQ-001), ré-identification exacte (REQ-002), journaux
+sans donnée personnelle (REQ-003), vault chiffré au repos (REQ-004),
+compteurs persistants (REQ-005), placeholders inconnus bloquants (REQ-006),
+streaming refusé (REQ-010). La détection s'appuie sur le NER français
+CamemBERT (modèle épinglé, rappel et précision
+[mesurés et publiés](docs/eval/evaluation-ner.md)) et le proxy parle à tout
+backend OpenAI-compatible par simple configuration (REQ-013) : Ollama local,
+Infomaniak, Scaleway... Voir [`docs/deploiement.md`](docs/deploiement.md)
+pour l'installation Docker et la validation manuelle,
 [`docs/specs/`](docs/specs/) pour le cadrage complet et
-[`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md) pour la feuille de route.
+[`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md) pour la feuille de route
+(prochains lots : coréférence par dossier, interface web).
 
 ## Démarrage (développement)
 

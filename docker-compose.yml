@@ -1,0 +1,41 @@
+# Distribution de référence (ADR-013) : le sas seul par défaut, le service
+# Ollama en option via le profil « ollama » (GPU NVIDIA, container toolkit).
+#
+#   docker compose up --build                    # sas seul (backend externe)
+#   docker compose --profile ollama up --build   # sas + Ollama local
+#
+# Topologie T2 (serveur) : même compose sans le profil ollama, avec
+# SAS_BACKEND_BASE_URL pointé vers Infomaniak ou Scaleway (voir docs/).
+
+services:
+  sas:
+    build: .
+    # Boucle locale par défaut : exposer plus largement est un choix explicite.
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      SAS_BACKEND_BASE_URL: ${SAS_BACKEND_BASE_URL:-http://ollama:11434/v1}
+      # Modèles annoncés par /v1/models : doivent exister côté backend
+      # (ollama pull mistral-small:24b, par exemple).
+      SAS_MODELES: ${SAS_MODELES:-mistral-small:24b}
+      # Clé API du backend cloud : à injecter par secret ou variable de
+      # session, JAMAIS écrite dans ce fichier ni committée.
+      SAS_BACKEND_CLE_API: ${SAS_BACKEND_CLE_API:-}
+      SAS_NER: ${SAS_NER:-auto}
+
+  ollama:
+    # Épingler une version précise en production plutôt que latest.
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    profiles: ["ollama"]
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  ollama:
