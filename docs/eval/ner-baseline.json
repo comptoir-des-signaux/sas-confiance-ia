@@ -1,0 +1,15 @@
+{
+  "moteur": "transformers",
+  "modele": "Jean-Baptiste/camembert-ner",
+  "revision": "ef35fe7767c1dad71f5c853838cdd80d0b3441ed",
+  "rappel": {
+    "PERSONNE": 0.9583333333333334,
+    "ORGANISATION": 1.0,
+    "LIEU": 0.8260869565217391
+  },
+  "precision": {
+    "PERSONNE": 0.9230769230769231,
+    "ORGANISATION": 0.25,
+    "LIEU": 1.0
+  }
+}
