@@ -11,13 +11,16 @@ Phase 1) devra alimenter à son tour : la Phase 0 reste sans modèle.
 """
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from typing import Protocol
 
 from .validators import iban_valide, luhn_valide, nir_valide
 
-# Priorité de résolution des chevauchements (REQ-016). Les types absents de
-# cette liste (couches NER et juge, Phase 1+) passeront après CARTE_BANCAIRE.
+# Priorité de résolution des chevauchements (REQ-016). Les types déterministes
+# (C1, clés validées ou contexte explicite) priment tous sur les types
+# probabilistes du NER (PERSONNE > ORGANISATION > LIEU) : une couche moins
+# fiable ne dégrade jamais ce qu'une couche plus fiable a établi (02-AI-SPEC §1).
 PRIORITE = [
     "FR_NIR",
     "FR_SIRET",
@@ -30,6 +33,9 @@ PRIORITE = [
     "PLAQUE",
     "REFERENCE_DOSSIER",
     "DATE_NAISSANCE",
+    "PERSONNE",
+    "ORGANISATION",
+    "LIEU",
 ]
 
 
@@ -40,6 +46,12 @@ class EntiteDetectee:
     fin: int
     score: float
     valeur: str
+
+
+class Moteur(Protocol):
+    """Une couche de détection supplémentaire (NER C2, juge C3) : mêmes candidats."""
+
+    def reconnaitre(self, texte: str) -> list[EntiteDetectee]: ...
 
 
 @dataclass(frozen=True)
@@ -150,9 +162,11 @@ def _resoudre_chevauchements(candidats: list[EntiteDetectee]) -> list[EntiteDete
     return sorted(retenues, key=lambda e: e.debut)
 
 
-def detecter(texte: str) -> list[EntiteDetectee]:
-    """Détection déterministe : reconnaisseurs C1 puis résolution REQ-016."""
+def detecter(texte: str, moteurs: Iterable[Moteur] = ()) -> list[EntiteDetectee]:
+    """Détection : reconnaisseurs C1 plus moteurs fournis, puis résolution REQ-016."""
     candidats: list[EntiteDetectee] = []
     for reconnaisseur in RECONNAISSEURS:
         candidats.extend(reconnaisseur.reconnaitre(texte))
+    for moteur in moteurs:
+        candidats.extend(moteur.reconnaitre(texte))
     return _resoudre_chevauchements(candidats)

@@ -67,6 +67,32 @@ def test_deux_valeurs_distinctes_deux_placeholders():
     assert placeholders == ["[EMAIL_001]", "[EMAIL_002]"]
 
 
+def test_pseudonymisation_avec_moteur_additionnel():
+    # Lot 9 : les candidats d'un moteur (NER) sont pseudonymisés et réversibles
+    # comme ceux de la couche déterministe.
+    from sas_confiance_ia.detection import EntiteDetectee
+
+    class MoteurFactice:
+        def reconnaitre(self, texte: str):
+            valeur = "Marie Martin"
+            debut = texte.find(valeur)
+            if debut < 0:
+                return []
+            return [
+                EntiteDetectee(
+                    type="PERSONNE", debut=debut, fin=debut + len(valeur), score=0.9, valeur=valeur
+                )
+            ]
+
+    pseudo = Pseudonymiseur(VaultMemoire(), moteurs=[MoteurFactice()])
+    texte = "Marie Martin, joignable à marie.martin@exemple.fr, est passée."
+    resultat = pseudo.pseudonymiser(texte, dossier_id="d1")
+    assert "[PERSONNE_001]" in resultat.texte
+    assert "Marie Martin" not in resultat.texte
+    assert resultat.comptes_par_type == {"PERSONNE": 1, "EMAIL": 1}
+    assert pseudo.reidentifier(resultat.texte, dossier_id="d1") == texte
+
+
 def test_comptes_par_type_pour_le_journal():
     # REQ-003 : le journal ne connaît que des comptes par type, jamais les valeurs.
     pseudo = nouveau()

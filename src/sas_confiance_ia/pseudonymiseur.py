@@ -7,9 +7,10 @@ inconnus ou manquants, REQ-006) est porté par le module integrity.
 
 import re
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 
-from .detection import EntiteDetectee, detecter
+from .detection import EntiteDetectee, Moteur, detecter
 from .vault import Vault
 
 MOTIF_PLACEHOLDER = re.compile(r"\[[A-Z_]+_\d{3,}\]")
@@ -29,11 +30,12 @@ class ResultatPseudonymisation:
 
 
 class Pseudonymiseur:
-    def __init__(self, vault: Vault) -> None:
+    def __init__(self, vault: Vault, moteurs: Sequence[Moteur] = ()) -> None:
         self._vault = vault
+        self._moteurs = list(moteurs)
 
     def pseudonymiser(self, texte: str, dossier_id: str) -> ResultatPseudonymisation:
-        entites = detecter(texte)
+        entites = detecter(texte, moteurs=self._moteurs)
         remplacements = [
             Remplacement(
                 entite=e,

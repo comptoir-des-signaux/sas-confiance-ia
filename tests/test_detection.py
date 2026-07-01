@@ -1,12 +1,15 @@
-"""Lot 3 : détection déterministe (C1), REQ-016.
+"""Lots 3 et 9 : détection déterministe (C1) et entrée des candidats NER (C2).
 
-Exigence de vert : rappel 1,0 sur les types déterministes du corpus, et
-résolution des chevauchements selon la priorité du 03-SPEC.
+Exigence de vert du Lot 3 : rappel 1,0 sur les types déterministes du corpus,
+et résolution des chevauchements selon la priorité du 03-SPEC (REQ-016).
+Le Lot 9 ajoute l'interface `moteurs` : toute couche supplémentaire (NER,
+juge) fournit des candidats qui passent par la même résolution, sans jamais
+dégrader ce qu'une couche plus fiable a établi (02-AI-SPEC §1).
 """
 
 from pathlib import Path
 
-from sas_confiance_ia.detection import detecter
+from sas_confiance_ia.detection import EntiteDetectee, detecter
 
 CORPUS = Path(__file__).parent.parent / "corpus" / "synthetique"
 
@@ -79,3 +82,63 @@ def test_les_positions_correspondent_au_texte():
     texte = "Écrire à marie.martin@exemple.fr avant vendredi."
     (entite,) = detecter(texte)
     assert texte[entite.debut : entite.fin] == entite.valeur
+
+
+class MoteurFactice:
+    """Simule une couche probabiliste (C2 ou C3) : renvoie des candidats fixes."""
+
+    def __init__(self, entites: list[EntiteDetectee]) -> None:
+        self._entites = entites
+
+    def reconnaitre(self, texte: str) -> list[EntiteDetectee]:
+        return [e for e in self._entites if texte[e.debut : e.fin] == e.valeur]
+
+
+def _entite(type_: str, texte: str, valeur: str, score: float = 0.8) -> EntiteDetectee:
+    debut = texte.index(valeur)
+    return EntiteDetectee(
+        type=type_, debut=debut, fin=debut + len(valeur), score=score, valeur=valeur
+    )
+
+
+def test_un_moteur_additionnel_ajoute_ses_candidats():
+    texte = "Marie Martin est venue en mairie ce matin."
+    moteur = MoteurFactice([_entite("PERSONNE", texte, "Marie Martin")])
+    entites = detecter(texte, moteurs=[moteur])
+    assert any(e.type == "PERSONNE" and e.valeur == "Marie Martin" for e in entites)
+
+
+def test_sans_moteur_le_comportement_c1_est_inchange():
+    texte = "Marie Martin est venue en mairie ce matin."
+    assert detecter(texte) == []
+
+
+def test_un_type_deterministe_gagne_sur_un_candidat_ner():
+    # REQ-016 : EMAIL (C1, validé) prime sur PERSONNE (C2, probabiliste),
+    # même si le NER propose un empan qui recouvre l'adresse.
+    texte = "Écrire à marie.martin@exemple.fr rapidement."
+    moteur = MoteurFactice([_entite("PERSONNE", texte, "marie.martin@exemple.fr", score=0.99)])
+    entites = detecter(texte, moteurs=[moteur])
+    assert [e.type for e in entites] == ["EMAIL"]
+
+
+def test_personne_gagne_sur_organisation_et_lieu():
+    # Ordre REQ-016 : PERSON > ORGANIZATION > LOCATION.
+    texte = "Le cabinet Martin conseille la commune."
+    moteur = MoteurFactice(
+        [
+            _entite("ORGANISATION", texte, "cabinet Martin"),
+            _entite("PERSONNE", texte, "Martin", score=0.7),
+            _entite("LIEU", texte, "cabinet Martin", score=0.9),
+        ]
+    )
+    entites = detecter(texte, moteurs=[moteur])
+    assert [e.type for e in entites] == ["PERSONNE"]
+
+
+def test_deux_moteurs_cumulent_leurs_candidats():
+    texte = "Marie Martin travaille chez Nettoyage Occitan."
+    ner = MoteurFactice([_entite("PERSONNE", texte, "Marie Martin")])
+    juge = MoteurFactice([_entite("ORGANISATION", texte, "Nettoyage Occitan")])
+    entites = detecter(texte, moteurs=[ner, juge])
+    assert {e.type for e in entites} == {"PERSONNE", "ORGANISATION"}
