@@ -1,0 +1,58 @@
+{
+  "_commentaire": "Oracle de non-fuite (REQ-001, REQ-003) : aucune de ces valeurs, toutes synthétiques, ne doit apparaître dans un payload envoyé au backend IA ni dans un journal. Les valeurs sont listées telles qu'écrites dans les documents.",
+  "01-courrier-usager.md": [
+    "Marie Martin",
+    "8 impasse des Lilas",
+    "82000 Montauban",
+    "marie.martin@exemple.fr",
+    "06 12 34 56 78",
+    "14 juillet 1992",
+    "2 92 07 82 045 033 55",
+    "ALL-2026-0457"
+  ],
+  "02-note-rh.md": [
+    "Sophie Robert",
+    "Paul Bernard",
+    "3 mars 1988",
+    "RH-4521",
+    "Isabelle Costa"
+  ],
+  "03-contrat-prestation.md": [
+    "Nettoyage Occitan",
+    "824 750 004",
+    "824 750 004 00007",
+    "42 avenue de l'Industrie",
+    "Karim Haddad",
+    "FR11 3000 3000 1100 0987 6543 185",
+    "07 65 43 21 09",
+    "contact@nettoyage-occitan.exemple.fr"
+  ],
+  "04-dossier-usager/piece-1-courrier.md": [
+    "Jean Dupont",
+    "14 rue des Écoles",
+    "74000 Annecy",
+    "jean.dupont@exemple.fr",
+    "07 89 01 23 45",
+    "12 mars 1980",
+    "1 80 03 74 118 218 22"
+  ],
+  "04-dossier-usager/piece-2-note-interne.md": [
+    "M. Dupont",
+    "14 rue des Écoles"
+  ],
+  "04-dossier-usager/piece-3-compte-rendu.md": [
+    "J. Dupont",
+    "14 rue des Écoles"
+  ],
+  "05-compte-rendu-reunion.md": [
+    "Claude Fabre",
+    "Nadia Benali",
+    "Lucienne Vergnes",
+    "2 février 1962",
+    "Thierry Lacoste"
+  ],
+  "06-canaris.md": [
+    "Jojo",
+    "agent numéro 7"
+  ]
+}
