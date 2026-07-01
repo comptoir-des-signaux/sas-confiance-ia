@@ -6,7 +6,10 @@ si une entité du bon type la recouvre ENTIÈREMENT ; une détection partielle
 compte pour la précision (elle recouvre du vrai) mais pas pour le rappel.
 
 Usage : python -m sas_confiance_ia.evaluation [--moteur transformers|spacy]
-        [--baseline docs/eval/ner-baseline.json]
+
+L'option --ecrire-baseline ÉCRASE la référence de la porte 4.4 : à ne faire
+qu'après un changement de modèle assumé et documenté, jamais pour « faire
+passer » un test ; elle est refusée pour le moteur de repli.
 """
 
 import json
@@ -113,37 +116,62 @@ def _tableau_markdown(mesures: dict[str, MesureType]) -> str:
     return "\n".join(lignes)
 
 
+def ecrire_baseline(mesures: dict[str, MesureType], moteur: str, chemin: Path) -> None:
+    """Écrase la baseline de la porte 4.4 ; réservé au moteur de référence."""
+    if moteur != "transformers":
+        raise ValueError(
+            "la baseline de la porte 4.4 référence le moteur transformers "
+            "(CamemBERT épinglé) : l'écrire depuis le repli spaCy rendrait "
+            "la porte aveugle aux régressions"
+        )
+    from .ner import MODELE_TRANSFORMERS, REVISION_TRANSFORMERS
+
+    contenu = {
+        "moteur": moteur,
+        "modele": MODELE_TRANSFORMERS,
+        "revision": REVISION_TRANSFORMERS,
+        "rappel": {t: m.rappel for t, m in mesures.items() if m.rappel is not None},
+        "precision": {t: m.precision for t, m in mesures.items() if m.precision is not None},
+    }
+    chemin = Path(chemin)
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    chemin.write_text(json.dumps(contenu, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _description_moteur(moteur: str) -> str:
+    from .ner import MODELE_SPACY_REPLI, MODELE_TRANSFORMERS, REVISION_TRANSFORMERS
+
+    if moteur == "spacy":
+        return f"spacy ({MODELE_SPACY_REPLI}, repli hors porte 4.4)"
+    return f"transformers ({MODELE_TRANSFORMERS} @ {REVISION_TRANSFORMERS[:12]})"
+
+
 def _principal() -> None:
     import argparse
 
-    from .ner import MODELE_TRANSFORMERS, REVISION_TRANSFORMERS, creer_moteur_ner
+    from .ner import creer_moteur_ner
 
     parseur = argparse.ArgumentParser(description=__doc__)
     parseur.add_argument("--corpus", default="corpus/synthetique", type=Path)
     parseur.add_argument("--moteur", default="transformers", choices=["transformers", "spacy"])
     parseur.add_argument(
-        "--baseline", type=Path, default=None, help="écrit la baseline JSON à ce chemin"
+        "--ecrire-baseline",
+        type=Path,
+        default=None,
+        metavar="CHEMIN",
+        help="ÉCRASE la baseline de la porte 4.4 (réservé au moteur transformers, "
+        "après changement de modèle assumé)",
     )
     options = parseur.parse_args()
 
     textes, verite = charger_corpus(options.corpus)
     mesures = evaluer(creer_moteur_ner(moteur=options.moteur), textes, verite)
-    print(f"Moteur : {options.moteur} ({MODELE_TRANSFORMERS} @ {REVISION_TRANSFORMERS[:12]})")
+    print(f"Moteur : {_description_moteur(options.moteur)}")
     print(_tableau_markdown(mesures))
 
-    if options.baseline is not None:
-        contenu = {
-            "moteur": options.moteur,
-            "modele": MODELE_TRANSFORMERS,
-            "revision": REVISION_TRANSFORMERS,
-            "rappel": {t: m.rappel for t, m in mesures.items() if m.rappel is not None},
-            "precision": {t: m.precision for t, m in mesures.items() if m.precision is not None},
-        }
-        options.baseline.parent.mkdir(parents=True, exist_ok=True)
-        options.baseline.write_text(
-            json.dumps(contenu, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-        print(f"Baseline écrite : {options.baseline}")
+    if options.ecrire_baseline is not None:
+        ecrire_baseline(mesures, moteur=options.moteur, chemin=options.ecrire_baseline)
+        print(f"Baseline écrite : {options.ecrire_baseline}")
 
 
 if __name__ == "__main__":

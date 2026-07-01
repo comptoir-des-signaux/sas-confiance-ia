@@ -104,6 +104,29 @@ def test_charger_corpus_retourne_textes_et_verite():
     assert "06-canaris.md" not in textes
 
 
+def test_la_baseline_ne_s_ecrit_que_pour_le_moteur_de_reference(tmp_path):
+    # La porte 4.4 référence CamemBERT : écrire une baseline spaCy (scores
+    # plus faibles, métadonnées trompeuses) rendrait la porte aveugle.
+    from sas_confiance_ia.evaluation import MesureType, ecrire_baseline
+
+    mesures = {
+        "PERSONNE": MesureType(
+            rappel=0.5,
+            precision=0.5,
+            occurrences=2,
+            occurrences_couvertes=1,
+            detections=2,
+            detections_correctes=1,
+        )
+    }
+    with pytest.raises(ValueError, match="transformers"):
+        ecrire_baseline(mesures, moteur="spacy", chemin=tmp_path / "b.json")
+    ecrire_baseline(mesures, moteur="transformers", chemin=tmp_path / "b.json")
+    contenu = json.loads((tmp_path / "b.json").read_text(encoding="utf-8"))
+    assert contenu["moteur"] == "transformers"
+    assert contenu["rappel"]["PERSONNE"] == 0.5
+
+
 @pytest.mark.ner
 def test_porte_4_4_pas_de_regression_de_rappel_de_plus_de_2_points(moteur_ner):
     from sas_confiance_ia.evaluation import charger_corpus, evaluer
