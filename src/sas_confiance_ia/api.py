@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from .backends import Backend
 from .integrite import controler, normaliser_placeholders
+from .journal import Journal
 from .pseudonymiseur import Pseudonymiseur
 
 
@@ -34,7 +35,9 @@ def creer_application(
     pseudonymiseur: Pseudonymiseur,
     backend: Backend,
     modeles: list[str],
+    journal: Journal | None = None,
 ) -> FastAPI:
+    journal = journal or Journal()
     application = FastAPI(title="Sas Confiance IA", docs_url=None, redoc_url=None)
 
     @application.get("/health")
@@ -54,19 +57,30 @@ def creer_application(
         x_dossier_id: str | None = Header(default=None),
         x_reidentify_response: bool = Header(default=True),
     ) -> dict[str, Any]:
+        requete_id = str(uuid.uuid4())
+        dossier_id = x_dossier_id or f"dossier-{uuid.uuid4()}"
         if requete.stream:
+            journal.enregistrer(
+                requete_id=requete_id,
+                dossier_id=dossier_id,
+                backend=type(backend).__name__,
+                modele=requete.model,
+                statut="refus_streaming",
+            )
             raise HTTPException(
                 status_code=400,
                 detail="Le streaming (stream=true) est refusé en v1 : les placeholders "
                 "peuvent être coupés entre deux chunks (REQ-010).",
             )
-        dossier_id = x_dossier_id or f"dossier-{uuid.uuid4()}"
 
         messages_pseudonymises = []
         placeholders_envoyes: set[str] = set()
+        entites_par_type: dict[str, int] = {}
         for message in requete.messages:
             resultat = pseudonymiseur.pseudonymiser(message.content, dossier_id=dossier_id)
             placeholders_envoyes.update(r.placeholder for r in resultat.remplacements)
+            for type_, compte in resultat.comptes_par_type.items():
+                entites_par_type[type_] = entites_par_type.get(type_, 0) + compte
             messages_pseudonymises.append({"role": message.role, "content": resultat.texte})
 
         payload: dict[str, Any] = {"model": requete.model, "messages": messages_pseudonymises}
@@ -89,6 +103,17 @@ def creer_application(
         if rapport.integrite_ok and x_reidentify_response:
             contenu = pseudonymiseur.reidentifier(contenu, dossier_id=dossier_id)
             reidentifie = True
+
+        journal.enregistrer(
+            requete_id=requete_id,
+            dossier_id=dossier_id,
+            backend=type(backend).__name__,
+            modele=requete.model,
+            statut="ok",
+            entites_par_type=entites_par_type,
+            taille_approx=sum(len(m["content"]) for m in messages_pseudonymises),
+            integrite=rapport.action,
+        )
 
         return {
             "id": f"chatcmpl-{uuid.uuid4()}",
