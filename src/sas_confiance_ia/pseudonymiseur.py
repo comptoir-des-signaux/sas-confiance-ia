@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from .detection import EntiteDetectee, detecter
 from .vault import Vault
 
-MOTIF_PLACEHOLDER = re.compile(r"\[[A-Z_]+_\d{3}\]")
+MOTIF_PLACEHOLDER = re.compile(r"\[[A-Z_]+_\d{3,}\]")
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,9 @@ class Pseudonymiseur:
             remplacements=remplacements,
             comptes_par_type=dict(Counter(e.type for e in entites)),
         )
+
+    def placeholders_connus(self, dossier_id: str) -> set[str]:
+        return self._vault.placeholders_connus(dossier_id)
 
     def reidentifier(self, texte: str, dossier_id: str) -> str:
         def substituer(m: re.Match[str]) -> str:

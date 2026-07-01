@@ -13,6 +13,7 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 from .backends import Backend
+from .integrite import controler, normaliser_placeholders
 from .pseudonymiseur import Pseudonymiseur
 
 
@@ -76,6 +77,19 @@ def creer_application(
 
         reponse = backend.completer(payload)
 
+        # Contrôle d'intégrité (REQ-006) : lecture tolérante des placeholders
+        # altérés, blocage de la ré-identification en présence d'un inconnu.
+        contenu = normaliser_placeholders(reponse.contenu)
+        rapport = controler(
+            contenu,
+            placeholders_envoyes=placeholders_envoyes,
+            placeholders_connus=pseudonymiseur.placeholders_connus(dossier_id),
+        )
+        reidentifie = False
+        if rapport.integrite_ok and x_reidentify_response:
+            contenu = pseudonymiseur.reidentifier(contenu, dossier_id=dossier_id)
+            reidentifie = True
+
         return {
             "id": f"chatcmpl-{uuid.uuid4()}",
             "object": "chat.completion",
@@ -84,10 +98,15 @@ def creer_application(
             "choices": [
                 {
                     "index": 0,
-                    "message": {"role": "assistant", "content": reponse.contenu},
+                    "message": {"role": "assistant", "content": contenu},
                     "finish_reason": "stop",
                 }
             ],
+            "sas_confiance_ia": {
+                "dossier_id": dossier_id,
+                "integrite": rapport.en_dict(),
+                "reidentifie": reidentifie,
+            },
         }
 
     return application
