@@ -1,0 +1,44 @@
+{
+  "_commentaire": "Vérité terrain de la couche NER (Lot 9, 02-AI-SPEC §4.2) : mentions de personnes, organisations et lieux telles qu'écrites dans chaque document synthétique. Sert au calcul du rappel et de la précision PERSONNE / ORGANISATION / LIEU (mesure publiée, sans cible contractuelle). Le document 06-canaris.md est exclu par construction : ses identifiants indirects relèvent du juge LLM (02-AI-SPEC §4.3), pas du NER.",
+  "01-courrier-usager.md": {
+    "PERSONNE": ["Marie Martin"],
+    "ORGANISATION": [],
+    "LIEU": ["Montauban", "impasse des Lilas"]
+  },
+  "02-note-rh.md": {
+    "PERSONNE": ["Sophie Robert", "Paul Bernard", "M. Bernard", "Isabelle Costa"],
+    "ORGANISATION": [],
+    "LIEU": ["Bressols"]
+  },
+  "03-contrat-prestation.md": {
+    "PERSONNE": ["Karim Haddad"],
+    "ORGANISATION": ["Nettoyage Occitan"],
+    "LIEU": ["Bressols", "avenue de l'Industrie"]
+  },
+  "04-dossier-usager/piece-1-courrier.md": {
+    "PERSONNE": ["Jean Dupont"],
+    "ORGANISATION": [],
+    "LIEU": ["Annecy", "rue des Écoles"]
+  },
+  "04-dossier-usager/piece-2-note-interne.md": {
+    "PERSONNE": ["M. Dupont"],
+    "ORGANISATION": [],
+    "LIEU": ["rue des Écoles"]
+  },
+  "04-dossier-usager/piece-3-compte-rendu.md": {
+    "PERSONNE": ["J. Dupont"],
+    "ORGANISATION": [],
+    "LIEU": ["rue des Écoles", "Annecy"]
+  },
+  "05-compte-rendu-reunion.md": {
+    "PERSONNE": [
+      "Claude Fabre",
+      "Nadia Benali",
+      "Mme Benali",
+      "Lucienne Vergnes",
+      "Thierry Lacoste"
+    ],
+    "ORGANISATION": [],
+    "LIEU": ["Lauzerte", "place des Cornières", "chemin du Moulin"]
+  }
+}

@@ -60,6 +60,26 @@ uv venv && uv pip install -e ".[dev]"
 uv run pytest
 ```
 
+### Détection NER (noms, organisations, lieux)
+
+La couche NER (CamemBERT via Presidio, modèle épinglé par révision exacte)
+est optionnelle : le socle fonctionne sans elle, avec la seule détection
+déterministe. Pour l'activer :
+
+```bash
+# Sans GPU dédié au NER (recommandé : le GPU sert au LLM local, pas au NER) :
+uv pip install torch --index-url https://download.pytorch.org/whl/cpu
+uv pip install -e ".[dev,ner]"
+# Téléchargement unique du modèle épinglé (jamais au runtime ni en test) :
+uv run python -m sas_confiance_ia.telechargement
+uv run pytest            # les tests NER s'exécutent dès que le modèle est présent
+```
+
+Repli léger sans transformers (machine modeste) : installer l'extra
+`[ner-repli-spacy]` (spaCy `fr_core_news_lg`) et créer le moteur avec
+`creer_moteur_ner(moteur="spacy")`. La couverture est moindre que
+CamemBERT ; la mesure publiée fait foi.
+
 ## Crédits
 
 - Les validateurs français (clé NIR avec cas Corse 2A/2B, Luhn SIREN / SIRET)
