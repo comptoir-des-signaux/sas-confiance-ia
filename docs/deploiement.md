@@ -16,7 +16,9 @@ docker compose exec ollama ollama pull mistral-small:24b
 
 Le sas écoute sur `http://127.0.0.1:8787` (boucle locale par défaut).
 Le NER CamemBERT est intégré à l'image, téléchargé au build : aucun
-téléchargement au démarrage.
+téléchargement au démarrage. L'interface web minimale est servie à la
+racine (`http://127.0.0.1:8787/`) : pseudonymiser, ré-identifier,
+télécharger ; l'API du proxy reste sous `/v1/`.
 
 ### Sans Docker
 

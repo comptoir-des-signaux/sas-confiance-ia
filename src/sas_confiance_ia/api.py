@@ -52,6 +52,16 @@ def creer_application(
     journal = journal or Journal()
     application = FastAPI(title="Sas Confiance IA", docs_url=None, redoc_url=None)
 
+    # Séparation démo / sérieux (REQ-007) : suivie au niveau de l'instance.
+    dossiers_serieux: set[str] = set()
+    dossiers_demo: set[str] = set()
+
+    from .ui import creer_routeur_ui
+
+    application.include_router(
+        creer_routeur_ui(pseudonymiseur, dossiers_serieux, dossiers_demo)
+    )
+
     @application.get("/health")
     def health() -> dict[str, str]:
         return {"statut": "ok"}
@@ -71,6 +81,8 @@ def creer_application(
     ) -> dict[str, Any]:
         requete_id = str(uuid.uuid4())
         dossier_id = x_dossier_id or f"dossier-{uuid.uuid4()}"
+        # Le proxy travaille toujours en mode sérieux (REQ-007).
+        dossiers_serieux.add(dossier_id)
         if requete.stream:
             journal.enregistrer(
                 requete_id=requete_id,

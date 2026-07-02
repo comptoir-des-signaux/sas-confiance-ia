@@ -60,8 +60,13 @@ pour revue, jamais fusionnés (limite documentée dans
 [`docs/deploiement.md`](docs/deploiement.md)
 pour l'installation Docker et la validation manuelle,
 [`docs/specs/`](docs/specs/) pour le cadrage complet et
-[`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md) pour la feuille de route
-(prochain lot : interface web).
+[`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md) pour la feuille de route.
+Une interface web minimale est servie à la racine (`http://127.0.0.1:8787/`) :
+coller un texte, pseudonymiser, ré-identifier ; le mode sérieux n'affiche
+jamais les valeurs détectées (types, positions et comptes seulement), le mode
+démonstration (bandeau distinct, données synthétiques) refuse de s'activer si
+des dossiers sérieux sont actifs dans l'instance. Phase 1 complète ;
+prochaine phase : juge LLM local, politiques par type, fichiers.
 
 ## Démarrage (développement)
 
