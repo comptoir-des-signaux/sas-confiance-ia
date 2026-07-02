@@ -5,7 +5,7 @@ françaises dans vos textes, remplacez-les par des pseudonymes, envoyez le texte
 protégé à un modèle de langage, puis ré-identifiez la réponse **en zone de
 confiance**. La table de correspondance ne quitte jamais votre infrastructure.
 
-Un commun numérique porté par [Comptoir des Signaux](https://comptoirdessignaux.fr),
+Un commun numérique porté par [Comptoir des Signaux](https://www.comptoirdessignaux.com/),
 conçu pour les collectivités territoriales et la fonction publique, sous
 licence [EUPL-1.2](LICENSE).
 
