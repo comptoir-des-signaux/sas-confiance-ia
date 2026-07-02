@@ -17,6 +17,18 @@ from .integrite import controler, normaliser_placeholders
 from .journal import Journal
 from .pseudonymiseur import Pseudonymiseur
 
+# Parade F5 (02-AI-SPEC §3) : le LLM applicatif altère volontiers les
+# jetons (crochets perdus, casse, faute sur le type, constaté sur
+# mistral-small:24b). Cette consigne est injectée en tête de conversation
+# dès qu'un placeholder part dans le payload.
+CONSIGNE_PRESERVATION_JETONS = (
+    "Le texte de l'utilisateur contient des jetons de pseudonymisation au "
+    "format [TYPE_NNN], par exemple [PERSONNE_001]. Recopie ces jetons "
+    "EXACTEMENT à l'identique (crochets, majuscules, tiret bas, zéros) "
+    "chaque fois que tu y fais référence. Ne les traduis pas, ne les "
+    "reformule pas, n'en invente jamais de nouveaux."
+)
+
 
 class MessageChat(BaseModel):
     role: str
@@ -83,6 +95,10 @@ def creer_application(
                 entites_par_type[type_] = entites_par_type.get(type_, 0) + compte
             messages_pseudonymises.append({"role": message.role, "content": resultat.texte})
 
+        if placeholders_envoyes:
+            messages_pseudonymises.insert(
+                0, {"role": "system", "content": CONSIGNE_PRESERVATION_JETONS}
+            )
         payload: dict[str, Any] = {"model": requete.model, "messages": messages_pseudonymises}
         if requete.temperature is not None:
             payload["temperature"] = requete.temperature
@@ -109,11 +125,12 @@ def creer_application(
 
         # Contrôle d'intégrité (REQ-006) : lecture tolérante des placeholders
         # altérés, blocage de la ré-identification en présence d'un inconnu.
-        contenu = normaliser_placeholders(reponse.contenu)
+        placeholders_connus = pseudonymiseur.placeholders_connus(dossier_id)
+        contenu = normaliser_placeholders(reponse.contenu, connus=placeholders_connus)
         rapport = controler(
             contenu,
             placeholders_envoyes=placeholders_envoyes,
-            placeholders_connus=pseudonymiseur.placeholders_connus(dossier_id),
+            placeholders_connus=placeholders_connus,
         )
         reidentifie = False
         if rapport.integrite_ok and x_reidentify_response:
