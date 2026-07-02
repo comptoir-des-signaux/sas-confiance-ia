@@ -65,6 +65,23 @@ class Moteur(Protocol):
     def reconnaitre(self, texte: str) -> list[EntiteDetectee]: ...
 
 
+def _contexte_present(texte: str, debut: int, contexte: re.Pattern[str]) -> bool:
+    """Le mot de contexte est-il sur la ligne du motif ou la précédente ?
+
+    Une fenêtre fixe de caractères laissait fuir les éléments éloignés du
+    mot de contexte (énumérations, libellés longs) ou tronquait le mot à la
+    coupe (revue lot 13 bis). La ligne est l'unité naturelle des documents
+    administratifs ; une ligne vide coupe le contexte (autre section).
+    """
+    debut_ligne = texte.rfind("\n", 0, debut) + 1
+    debut_fenetre = debut_ligne
+    if debut_ligne > 0:
+        debut_precedente = texte.rfind("\n", 0, debut_ligne - 1) + 1
+        if texte[debut_precedente : debut_ligne - 1].strip():
+            debut_fenetre = debut_precedente
+    return bool(contexte.search(texte[debut_fenetre:debut]))
+
+
 @dataclass(frozen=True)
 class Reconnaisseur:
     type: str
@@ -72,29 +89,38 @@ class Reconnaisseur:
     score: float
     groupe: int = 0
     validation: Callable[[str], bool] | None = None
-    # Contexte requis AVANT le motif (fenêtre de caractères) : porte les
-    # reconnaisseurs fail-safe de Q4 (motif structurel masqué seulement si
-    # un mot explicite le précède : « NIR », « SIRET », « matricule »...).
+    # Contexte requis (ligne courante ou précédente) pour le type principal :
+    # porte les reconnaisseurs purement contextuels (RPPS, MATRICULE).
     contexte: re.Pattern[str] | None = None
-    fenetre_contexte: int = 40
+    # Variante fail-safe de Q4 : si la validation échoue MAIS que le
+    # contexte suspect est présent, le motif est masqué sous ce type
+    # distinct à score moindre. Un seul balayage du texte pour les deux.
+    type_suspect: str | None = None
+    score_suspect: float = 0.7
+    contexte_suspect: re.Pattern[str] | None = None
 
     def reconnaitre(self, texte: str) -> list[EntiteDetectee]:
         entites = []
         for m in self.motif.finditer(texte):
             valeur = m.group(self.groupe)
+            debut = m.start(self.groupe)
+            type_, score = self.type, self.score
             if self.validation is not None and not self.validation(valeur):
-                continue
-            if self.contexte is not None:
-                debut = m.start(self.groupe)
-                fenetre = texte[max(0, debut - self.fenetre_contexte) : debut]
-                if not self.contexte.search(fenetre):
+                if self.type_suspect is None or not _contexte_present(
+                    texte, debut, self.contexte_suspect
+                ):
                     continue
+                type_, score = self.type_suspect, self.score_suspect
+            elif self.contexte is not None and not _contexte_present(
+                texte, debut, self.contexte
+            ):
+                continue
             entites.append(
                 EntiteDetectee(
-                    type=self.type,
-                    debut=m.start(self.groupe),
+                    type=type_,
+                    debut=debut,
                     fin=m.end(self.groupe),
-                    score=self.score,
+                    score=score,
                     valeur=valeur,
                 )
             )
@@ -122,33 +148,33 @@ RECONNAISSEURS: list[Reconnaisseur] = [
         motif=_MOTIF_NIR,
         score=0.95,
         validation=nir_valide,
+        type_suspect="FR_NIR_SUSPECT",
+        contexte_suspect=_CONTEXTE_NIR,
     ),
     Reconnaisseur(
-        type="FR_NIR_SUSPECT",
-        motif=_MOTIF_NIR,
-        score=0.7,
-        contexte=_CONTEXTE_NIR,
-    ),
-    Reconnaisseur(
-        type="FR_SIRET_SUSPECT",
+        type="FR_SIRET",
         motif=_MOTIF_SIRET,
-        score=0.7,
-        contexte=_CONTEXTE_SIRET,
+        score=0.9,
+        validation=lambda v: luhn_valide(_sans_separateurs(v)),
+        type_suspect="FR_SIRET_SUSPECT",
+        contexte_suspect=_CONTEXTE_SIRET,
     ),
     Reconnaisseur(
-        type="FR_SIREN_SUSPECT",
+        type="FR_SIREN",
         motif=_MOTIF_SIREN,
-        score=0.65,
-        contexte=_CONTEXTE_SIREN,
+        score=0.85,
+        validation=lambda v: luhn_valide(_sans_separateurs(v)),
+        type_suspect="FR_SIREN_SUSPECT",
+        score_suspect=0.65,
+        contexte_suspect=_CONTEXTE_SIREN,
     ),
     Reconnaisseur(
-        type="IBAN_SUSPECT",
+        type="IBAN",
         motif=_MOTIF_IBAN,
-        score=0.7,
-        contexte=_CONTEXTE_IBAN,
-        # « IBAN communiqué pour le remboursement des frais médicaux : ... » :
-        # le mot de contexte peut être loin du motif.
-        fenetre_contexte=80,
+        score=0.95,
+        validation=iban_valide,
+        type_suspect="IBAN_SUSPECT",
+        contexte_suspect=_CONTEXTE_IBAN,
     ),
     Reconnaisseur(
         type="RPPS",
@@ -157,41 +183,25 @@ RECONNAISSEURS: list[Reconnaisseur] = [
         # Clé Luhn non exigée (Q4) : en contexte RPPS explicite, la fuite
         # d'un numéro de professionnel de santé prime sur la clé.
         contexte=re.compile(r"(?i)\bRPPS\b"),
-        fenetre_contexte=20,
     ),
     Reconnaisseur(
         type="MATRICULE",
         motif=re.compile(r"\b\d{2,6}-\d{2,6}\b"),
         score=0.8,
         contexte=re.compile(r"(?i)\bmatricule\b"),
-        fenetre_contexte=20,
     ),
     Reconnaisseur(
         type="CODE_POSTAL",
-        # Cinq chiffres immédiatement suivis d'un mot capitalisé : un code
-        # postal devant sa commune (« 82000 Montauban »), ré-identifiant en
-        # combinaison même quand la commune est masquée par le NER.
-        motif=re.compile(r"\b(\d{5})(?=\s+[A-ZÀÂÉÈÊÎÔÙÛ])"),
+        # Cinq chiffres suivis, sur la même ligne, d'un mot capitalisé puis
+        # d'une minuscule : un code postal devant sa commune (« 82000
+        # Montauban »), ré-identifiant en combinaison même quand la commune
+        # est masquée par le NER. La minuscule exclut les sigles (« 45000
+        # EUR ») ; une commune tout en majuscules reste au NER (limite).
+        motif=re.compile(
+            r"\b(\d{5})(?=[  ]+[A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŒÆ][a-zà-öø-ÿœæ'’-])"
+        ),
         score=0.75,
         groupe=1,
-    ),
-    Reconnaisseur(
-        type="FR_SIRET",
-        motif=_MOTIF_SIRET,
-        score=0.9,
-        validation=lambda v: luhn_valide(_sans_separateurs(v)),
-    ),
-    Reconnaisseur(
-        type="FR_SIREN",
-        motif=_MOTIF_SIREN,
-        score=0.85,
-        validation=lambda v: luhn_valide(_sans_separateurs(v)),
-    ),
-    Reconnaisseur(
-        type="IBAN",
-        motif=_MOTIF_IBAN,
-        score=0.95,
-        validation=iban_valide,
     ),
     Reconnaisseur(
         type="EMAIL",
@@ -294,10 +304,11 @@ def _resoudre_chevauchements(candidats: list[EntiteDetectee]) -> list[EntiteDete
 
 # Types probabilistes dont les empans contigus fusionnent : le NER découpe
 # parfois une même mention (« avenue de l' » + « Europe »), produisant deux
-# placeholders collés dans le texte pseudonymisé. Les types déterministes ne
-# fusionnent jamais (deux NIR côte à côte restent deux entités).
+# placeholders collés dans le texte pseudonymisé. Seul le contact DIRECT
+# (écart nul, découpe de tokenisation) fusionne : un espace ou un tiret
+# peut séparer deux entités réellement distinctes (« Sophie MARTIN Paul
+# DURAND », « l'axe Toulouse-Montauban ») et la fusion serait un F4.
 _TYPES_FUSIONNABLES = {"PERSONNE", "ORGANISATION", "LIEU"}
-_LIANTS = " '’-"
 
 
 def _fusionner_adjacentes(
@@ -307,12 +318,10 @@ def _fusionner_adjacentes(
     for entite in entites:
         if fusionnees:
             precedente = fusionnees[-1]
-            ecart = texte[precedente.fin : entite.debut]
             if (
                 entite.type == precedente.type
                 and entite.type in _TYPES_FUSIONNABLES
-                and len(ecart) <= 1
-                and all(c in _LIANTS for c in ecart)
+                and entite.debut == precedente.fin
             ):
                 fusionnees[-1] = EntiteDetectee(
                     type=precedente.type,

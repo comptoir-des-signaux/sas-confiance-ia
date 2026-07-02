@@ -170,3 +170,14 @@ def test_la_consigne_de_preservation_des_jetons_est_injectee():
 
     completion(client, "Quelle est la capitale de la France ?")
     assert '"role": "system"' not in backend.payloads_bruts[-1]
+
+
+def test_la_correspondance_exacte_prime_sur_la_distance_1():
+    # SIRET/SIREN (et leurs variantes _SUSPECT) sont à une faute l'un de
+    # l'autre : sans préférence pour l'exact, un jeton aux crochets perdus
+    # devenait ambigu et n'était jamais restauré (perte silencieuse).
+    connus = {"[SIRET_SUSPECT_001]", "[SIREN_SUSPECT_001]"}
+    assert (
+        normaliser_placeholders("Le SIRET_SUSPECT_001 est requalifié.", connus=connus)
+        == "Le [SIRET_SUSPECT_001] est requalifié."
+    )

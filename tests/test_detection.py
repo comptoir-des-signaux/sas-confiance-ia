@@ -288,3 +288,65 @@ def test_deux_moteurs_cumulent_leurs_candidats():
     juge = MoteurFactice([_entite("ORGANISATION", texte, "Nettoyage Occitan")])
     entites = detecter(texte, moteurs=[ner, juge])
     assert {e.type for e in entites} == {"PERSONNE", "ORGANISATION"}
+
+
+def test_le_contexte_porte_sur_la_ligne_entiere():
+    # Revue lot 13 bis : une fenêtre fixe de 40 caractères laissait fuir le
+    # NIR dès que le mot de contexte était éloigné sur la même ligne.
+    entites = detecter(
+        "Le numéro de sécurité sociale communiqué par la caisse : 2 86 09 26 112 088 35."
+    )
+    assert [e for e in entites if e.type == "FR_NIR_SUSPECT"]
+
+
+def test_le_contexte_de_la_ligne_precedente_compte():
+    entites = detecter("Matricule de l'agent titulaire :\n2014-0883.")
+    assert [e for e in entites if e.type == "MATRICULE"]
+
+
+def test_une_enumeration_en_contexte_masque_tous_les_elements():
+    entites = detecter(
+        "NIR : 1 79 03 26 121 044 87, 2 86 09 26 112 088 35 et 1 67 07 26 047 211 06."
+    )
+    assert len([e for e in entites if e.type == "FR_NIR_SUSPECT"]) == 3
+
+
+def test_le_contexte_ne_traverse_pas_une_ligne_vide():
+    entites = detecter("NIR :\n\nLe relevé mentionne 1 79 03 26 121 044 87 en marge.")
+    assert not [e for e in entites if e.type == "FR_NIR_SUSPECT"]
+
+
+def test_un_iban_a_cle_fausse_sans_contexte_reste_ignore():
+    entites = detecter("Le code FR12 3000 3000 1100 0987 6543 185 est archivé au greffe.")
+    assert not [e for e in entites if e.type.startswith("IBAN")]
+
+
+def test_les_empans_separes_par_un_espace_ne_fusionnent_pas():
+    # F4 : deux personnes juxtaposées (« Sophie MARTIN Paul DURAND ») ne
+    # doivent jamais devenir une seule entité. Seul le contact direct
+    # (découpe de tokenisation, écart nul) fusionne.
+    class MoteurFictif:
+        def reconnaitre(self, texte):
+            return [
+                EntiteDetectee("PERSONNE", 0, 13, 0.8, texte[0:13]),
+                EntiteDetectee("PERSONNE", 14, 25, 0.8, texte[14:25]),
+            ]
+
+    texte = "Sophie MARTIN Paul DURAND sont présents."
+    entites = detecter(texte, moteurs=[MoteurFictif()])
+    assert len([e for e in entites if e.type == "PERSONNE"]) == 2
+
+
+def test_un_montant_devant_une_devise_n_est_pas_un_code_postal():
+    entites = detecter("La facture s'élève à 45000 EUR hors taxes.")
+    assert not [e for e in entites if e.type == "CODE_POSTAL"]
+
+
+def test_le_code_postal_ne_traverse_pas_les_lignes():
+    entites = detecter("Budget voté : 82000\nMontant complémentaire à prévoir.")
+    assert not [e for e in entites if e.type == "CODE_POSTAL"]
+
+
+def test_un_code_postal_devant_une_commune_a_initiale_rare():
+    entites = detecter("Domiciliée 51480 Œuilly depuis 2019.")
+    assert any(e.type == "CODE_POSTAL" and e.valeur == "51480" for e in entites)

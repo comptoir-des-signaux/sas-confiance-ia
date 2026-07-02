@@ -81,6 +81,11 @@ def normaliser_placeholders(texte: str, connus: Set[str] = frozenset()) -> str:
 
     def restaurer(m: re.Match[str]) -> str:
         type_brut, numero = _epurer_type(m.group(1)), int(m.group(2))
+        # La correspondance exacte prime : SIRET/SIREN (et leurs variantes
+        # _SUSPECT) sont à une faute l'un de l'autre, et un jeton aux seuls
+        # crochets perdus deviendrait ambigu, donc jamais restauré.
+        if type_brut in types_connus and numero in types_connus[type_brut]:
+            return f"[{type_brut}_{numero:03d}]"
         candidats = [
             type_
             for type_, numeros in types_connus.items()
