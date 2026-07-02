@@ -150,6 +150,16 @@ survit au redémarrage, comme la séparation démo / sérieux. Une action ou un
 type inconnu est refusé : une faute de frappe ne dégrade jamais la
 couverture en silence.
 
+**Dates différenciées (REQ-008).** La date de naissance (« née le 12 mai
+1985 », « Date de naissance : 28/09/1986 ») est masquée par défaut. Les
+dates procédurales (décision, séance, accident) sont détectées, comptées et
+conservées par défaut : elles portent l'utilité métier du texte. La
+politique du dossier peut les passer en `revue` (masquées et signalées pour
+relecture) ou en `pseudonymiser` ; l'interface propose ce choix. Limites
+documentées : une date sans année n'est pas reconnue, le tiret n'est pas un
+séparateur admis (collision avec les matricules), et une date recouverte
+par une entité plus sensible reste masquée avec elle.
+
 ## Crédits
 
 - Les validateurs français (clé NIR avec cas Corse 2A/2B, Luhn SIREN / SIRET)

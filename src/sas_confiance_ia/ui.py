@@ -239,6 +239,14 @@ PAGE_HTML = """<!DOCTYPE html>
         <option value="demo">Démonstration (valeurs visibles)</option>
       </select>
     </div>
+    <div>
+      <label for="dates">Dates procédurales</label>
+      <select id="dates">
+        <option value="conserver" selected>Conserver (défaut)</option>
+        <option value="revue">Masquer et faire relire</option>
+        <option value="pseudonymiser">Pseudonymiser</option>
+      </select>
+    </div>
     <button id="pseudonymiser">Pseudonymiser</button>
     <button id="reidentifier" class="secondaire" disabled>Ré-identifier une réponse</button>
     <button id="exemple" class="secondaire">Charger un exemple (mode démo)</button>
@@ -325,6 +333,9 @@ el("pseudonymiser").addEventListener("click", async () => {
       texte: el("texte").value,
       dossier_id: el("dossier").value,
       mode: el("mode").value,
+      // Politique du dossier (Lot 14) : la date de naissance reste masquée
+      // par défaut, les dates procédurales suivent ce choix (REQ-008).
+      politiques: { DATE_PROCEDURALE: el("dates").value },
     });
     el("sortie").value = donnees.texte;
     el("resultat").style.display = "block";
@@ -342,6 +353,10 @@ function afficherSynthese(donnees) {
   if (donnees.ambiguites_coreference.length) {
     html += `<p>Rattachements à vérifier (homonymes possibles) :
       ${donnees.ambiguites_coreference.map(echapper).join(", ")}</p>`;
+  }
+  if (donnees.entites_en_revue && donnees.entites_en_revue.length) {
+    html += `<p>Masqués par prudence, à faire relire (politique « revue ») :
+      ${donnees.entites_en_revue.map(echapper).join(", ")}</p>`;
   }
   if (donnees.juge && donnees.juge.actif && donnees.juge.candidats.length) {
     // Le serveur ne renvoie que des positions (Q3) : le segment s'extrait

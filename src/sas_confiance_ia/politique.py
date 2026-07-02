@@ -22,9 +22,12 @@ ACTION_CONSERVER = "conserver"
 ACTION_REVUE = "revue"
 ACTIONS = (ACTION_PSEUDONYMISER, ACTION_MASQUER, ACTION_CONSERVER, ACTION_REVUE)
 
-# Défauts par type quand ni l'instance ni le dossier n'ont tranché. Vide à ce
-# jour : tout type détecté est pseudonymisé (l'interprétation protectrice).
-DEFAUTS: dict[str, str] = {}
+# Défauts par type quand ni l'instance ni le dossier n'ont tranché. Tout type
+# détecté est pseudonymisé, à une exception près, fixée par REQ-008 : les
+# dates procédurales (décision, séance, accident) sont conservées par défaut,
+# elles portent l'utilité métier du texte ; la date de naissance, elle, reste
+# masquée par défaut comme tout le reste.
+DEFAUTS: dict[str, str] = {"DATE_PROCEDURALE": ACTION_CONSERVER}
 
 
 def _types_connus() -> list[str]:

@@ -47,6 +47,10 @@ PRIORITE = [
     "PERSONNE",
     "ORGANISATION",
     "LIEU",
+    # Dernier de tous (REQ-008) : conservée par défaut, une date happée par
+    # une interprétation plus sensible (naissance, personne, lieu) doit
+    # rester à cette interprétation et donc masquée avec elle.
+    "DATE_PROCEDURALE",
 ]
 
 
@@ -136,6 +140,16 @@ _MOTIF_NIR = re.compile(r"\b[12]\s?\d{2}\s?\d{2}\s?(?:\d{2}|2[AB])\s?\d{3}\s?\d{
 _MOTIF_SIRET = re.compile(r"\b\d{3}\s?\d{3}\s?\d{3}\s?\d{5}\b")
 _MOTIF_SIREN = re.compile(r"\b\d{3}\s?\d{3}\s?\d{3}\b")
 _MOTIF_IBAN = re.compile(r"\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,7}(?:\s?[A-Z0-9]{1,4})?\b")
+
+# Date française, textuelle (« 1er juillet 2025 ») ou numérique
+# (« 12/02/2026 », « 12.02.2026 »). Le tiret n'est pas un séparateur admis :
+# il entrerait en collision avec les matricules (« 2014-0883 »). Une date
+# sans année n'est pas reconnue (limite documentée).
+_DATE = (
+    r"(?:\d{1,2}(?:er)?\s+"
+    r"(?i:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)"
+    r"\s+\d{4}|\d{1,2}[/.]\d{1,2}[/.]\d{4})"
+)
 
 _CONTEXTE_NIR = re.compile(r"(?i)\bNIR\b|s[ée]curit[ée]\s+sociale|\bINSEE\b")
 _CONTEXTE_SIRET = re.compile(r"(?i)\bSIRET\b")
@@ -231,9 +245,25 @@ RECONNAISSEURS: list[Reconnaisseur] = [
     ),
     Reconnaisseur(
         type="DATE_NAISSANCE",
-        motif=re.compile(r"\bn(?:ée|é)\s+le\s+(\d{1,2}(?:er)?\s+[a-zéèêûôîà]+\s+\d{4})"),
+        # « né le », « née le », « Né(e) le : » ; date textuelle ou numérique.
+        motif=re.compile(rf"(?i:\bné(?:e|\(e\))?\s+le\s*:?\s+)({_DATE})"),
         score=0.85,
         groupe=1,
+    ),
+    Reconnaisseur(
+        type="DATE_NAISSANCE",
+        # Formulaires : le libellé porte le contexte (« Date de naissance : »),
+        # sur la ligne de la date ou la précédente, sans « né(e) le ».
+        motif=re.compile(_DATE),
+        score=0.8,
+        contexte=re.compile(r"(?i)date\s+de\s+naissance"),
+    ),
+    Reconnaisseur(
+        # REQ-008 : détectée pour être comptée et suivre la politique du
+        # dossier (conserver par défaut, revue ou pseudonymiser).
+        type="DATE_PROCEDURALE",
+        motif=re.compile(_DATE),
+        score=0.7,
     ),
 ]
 
