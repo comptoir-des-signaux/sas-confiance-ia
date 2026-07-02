@@ -43,12 +43,19 @@ class Pseudonymiseur:
         # entité distincte (arbitrage Q1, docs/specs/QUESTIONS.md).
         self._resolveur = ResolveurCoreference(vault) if coreference else None
 
+    @property
+    def vault(self) -> Vault:
+        return self._vault
+
     def _placeholder_pour(self, dossier_id: str, entite: EntiteDetectee) -> str:
         if self._resolveur is not None and entite.type == TYPE_PERSONNE:
             return self._resolveur.placeholder_pour(dossier_id, entite.valeur)
         return self._vault.placeholder_pour(dossier_id, entite.type, entite.valeur)
 
     def pseudonymiser(self, texte: str, dossier_id: str) -> ResultatPseudonymisation:
+        ambiguites_avant = (
+            self._resolveur.ambiguites(dossier_id) if self._resolveur else set()
+        )
         entites = detecter(texte, moteurs=self._moteurs)
         remplacements = [
             Remplacement(entite=e, placeholder=self._placeholder_pour(dossier_id, e))
@@ -64,8 +71,12 @@ class Pseudonymiseur:
             texte=pseudonymise,
             remplacements=remplacements,
             comptes_par_type=dict(Counter(e.type for e in entites)),
+            # Seules les ambiguïtés apparues pendant CET appel : le cumul du
+            # dossier reste consultable via le résolveur.
             ambiguites=(
-                sorted(self._resolveur.ambiguites(dossier_id)) if self._resolveur else []
+                sorted(self._resolveur.ambiguites(dossier_id) - ambiguites_avant)
+                if self._resolveur
+                else []
             ),
         )
 

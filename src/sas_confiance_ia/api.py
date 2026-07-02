@@ -52,15 +52,13 @@ def creer_application(
     journal = journal or Journal()
     application = FastAPI(title="Sas Confiance IA", docs_url=None, redoc_url=None)
 
-    # Séparation démo / sérieux (REQ-007) : suivie au niveau de l'instance.
-    dossiers_serieux: set[str] = set()
-    dossiers_demo: set[str] = set()
+    # Séparation démo / sérieux (REQ-007) : portée par le vault, donc
+    # persistante avec les données (un redémarrage ne la réinitialise pas).
+    vault = pseudonymiseur.vault
 
     from .ui import creer_routeur_ui
 
-    application.include_router(
-        creer_routeur_ui(pseudonymiseur, dossiers_serieux, dossiers_demo)
-    )
+    application.include_router(creer_routeur_ui(pseudonymiseur, journal))
 
     @application.get("/health")
     def health() -> dict[str, str]:
@@ -81,8 +79,22 @@ def creer_application(
     ) -> dict[str, Any]:
         requete_id = str(uuid.uuid4())
         dossier_id = x_dossier_id or f"dossier-{uuid.uuid4()}"
-        # Le proxy travaille toujours en mode sérieux (REQ-007).
-        dossiers_serieux.add(dossier_id)
+        # Le proxy travaille toujours en mode sérieux (REQ-007) : un dossier
+        # passé en démonstration est refusé sur ce chemin aussi.
+        if vault.mode_dossier(dossier_id) == "demo":
+            journal.enregistrer(
+                requete_id=requete_id,
+                dossier_id=dossier_id,
+                backend=type(backend).__name__,
+                modele=requete.model,
+                statut="refus_dossier_demo",
+            )
+            raise HTTPException(
+                status_code=409,
+                detail="Ce dossier a été utilisé en mode démonstration : il ne "
+                "peut plus servir en mode sérieux (séparation REQ-007).",
+            )
+        vault.marquer_dossier(dossier_id, "serieux")
         if requete.stream:
             journal.enregistrer(
                 requete_id=requete_id,

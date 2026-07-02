@@ -98,3 +98,63 @@ def test_reidentification_depuis_l_ui(client):
 
 def test_mode_inconnu_refuse(client):
     assert pseudonymiser(client, mode="turbo").status_code == 422
+
+
+def test_le_proxy_refuse_un_dossier_utilise_en_demo(client):
+    # REQ-007 : le garde-fou vaut sur tous les chemins, pas seulement l'UI.
+    pseudonymiser(client, mode="demo", dossier="d-demo")
+    reponse = client.post(
+        "/v1/chat/completions",
+        json={"model": "modele-de-test", "messages": [{"role": "user", "content": TEXTE}]},
+        headers={"X-Dossier-Id": "d-demo"},
+    )
+    assert reponse.status_code == 409
+
+
+def test_la_separation_demo_serieux_survit_au_redemarrage(tmp_path):
+    # Les modes des dossiers vivent avec le vault persistant, pas dans la
+    # mémoire du processus (02-AI-SPEC §5).
+    from sas_confiance_ia.vault import VaultChiffre, generer_cle
+
+    chemin, cle = tmp_path / "vault.sas", generer_cle()
+
+    def application_sur(vault):
+        return TestClient(
+            creer_application(
+                pseudonymiseur=Pseudonymiseur(vault),
+                backend=BackendCapture(),
+                modeles=["modele-de-test"],
+            )
+        )
+
+    client1 = application_sur(VaultChiffre(chemin, cle))
+    assert pseudonymiser(client1, mode="serieux").status_code == 200
+
+    client2 = application_sur(VaultChiffre(chemin, cle))
+    assert pseudonymiser(client2, mode="demo").status_code == 409
+
+
+def test_la_reidentification_ui_est_journalisee(client, caplog):
+    import json
+    import logging
+
+    corps = pseudonymiser(client).json()
+    with caplog.at_level(logging.INFO):
+        client.post(
+            "/ui/reidentifier", json={"texte": corps["texte"], "dossier_id": "d-ui"}
+        )
+    journaux = [r.message for r in caplog.records if r.name == "sas_confiance_ia.journal"]
+    evenement = json.loads(journaux[-1])
+    assert evenement["statut"] == "reidentification_ui"
+    assert evenement["dossier_id"] == "d-ui"
+    # Jamais de valeur ni de texte dans le journal (REQ-003).
+    assert "marie.martin@exemple.fr" not in "\n".join(journaux)
+    assert "[EMAIL_001]" not in "\n".join(journaux)
+
+
+def test_la_page_echappe_les_valeurs_avant_insertion_html():
+    # Parade XSS : tout contenu inséré via innerHTML passe par l'échappement.
+    from sas_confiance_ia.ui import PAGE_HTML
+
+    assert "function echapper" in PAGE_HTML
+    assert "echapper(d.valeur)" in PAGE_HTML

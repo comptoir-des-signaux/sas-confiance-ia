@@ -31,4 +31,25 @@ mentions fusionnées.
 ne sont jamais fusionnées sur le nom seul dès que l'ambiguïté existe ; en
 contrepartie, une mention « M. Dupont » antérieure à toute mention complète
 crée sa propre entité, rattachée ensuite si « Jean Dupont » apparaît et
-qu'aucun autre Dupont n'est connu du dossier.
+qu'aucun autre Dupont n'est connu du dossier. Les civilités de genres
+contradictoires (« M. Dupont » / « Mme Dupont ») ne fusionnent jamais ; en
+revanche, sans base de prénoms genrés, « Mme Dupont » se rattache à un
+« Jean Dupont » connu si aucune civilité masculine n'a été vue : risque
+résiduel F4 assumé et documenté. Une liaison sur forme réduite reste stable
+mais repasse en revue dès qu'un homonyme apparaît dans le dossier.
+
+## Q2 : ré-identification sans authentification (périmètre v1)
+
+**Constat (2026-07-02, Lot 12).** `/ui/reidentifier` (et le proxy avec
+`X-Dossier-Id`) permettent à quiconque atteint le port du sas de faire
+restituer les valeurs d'un dossier : les placeholders sont énumérables par
+construction. Le HANDOFF exclut explicitement l'authentification des
+Phases 0-1.
+
+**Interprétation retenue (à arbitrer pour la Phase 2).** Le périmètre v1 est
+la **zone de confiance mono-utilisateur** : écoute sur la boucle locale par
+défaut, identifiant de dossier non devinable généré par l'UI, chaque
+ré-identification UI journalisée (métadonnées seules). Toute exposition
+au-delà de la boucle locale est un choix explicite de déploiement, documenté
+comme hors périmètre v1. L'authentification (jeton par dossier ou frontal)
+est un chantier de Phase 2 à arbitrer avec les topologies T2-T4.

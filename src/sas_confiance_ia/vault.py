@@ -59,6 +59,12 @@ class Vault(Protocol):
         self, dossier_id: str, type_: str, placeholder: str, valeur: str
     ) -> None: ...
 
+    def marquer_dossier(self, dossier_id: str, mode: str) -> None: ...
+
+    def mode_dossier(self, dossier_id: str) -> str | None: ...
+
+    def un_dossier_serieux_existe(self) -> bool: ...
+
 
 class VaultMemoire:
     """Vault en mémoire : correspondances et compteurs par dossier et par type."""
@@ -70,6 +76,9 @@ class VaultMemoire:
         self._par_placeholder: dict[str, dict[str, str]] = defaultdict(dict)
         # dossier -> étiquette -> dernier numéro attribué
         self._compteurs: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        # dossier -> mode (serieux / demo) : la séparation REQ-007 vit avec
+        # les données, pas dans la mémoire du processus.
+        self._modes: dict[str, str] = {}
 
     def placeholder_pour(self, dossier_id: str, type_: str, valeur: str) -> str:
         cle = (type_, valeur)
@@ -107,6 +116,15 @@ class VaultMemoire:
         """La restitution du placeholder devient cette forme (plus complète)."""
         self._par_placeholder[dossier_id][placeholder] = valeur
         self._par_valeur[dossier_id][(type_, valeur)] = placeholder
+
+    def marquer_dossier(self, dossier_id: str, mode: str) -> None:
+        self._modes[dossier_id] = mode
+
+    def mode_dossier(self, dossier_id: str) -> str | None:
+        return self._modes.get(dossier_id)
+
+    def un_dossier_serieux_existe(self) -> bool:
+        return any(mode == "serieux" for mode in self._modes.values())
 
 
 def generer_cle() -> bytes:
@@ -146,6 +164,10 @@ class VaultChiffre(VaultMemoire):
         super().remplacer_valeur_canonique(dossier_id, type_, placeholder, valeur)
         self._persister()
 
+    def marquer_dossier(self, dossier_id: str, mode: str) -> None:
+        super().marquer_dossier(dossier_id, mode)
+        self._persister()
+
     def purger(self, dossier_id: str) -> None:
         """Efface définitivement les correspondances d'un dossier (cadrage §9.6)."""
         self._par_valeur.pop(dossier_id, None)
@@ -174,6 +196,7 @@ class VaultChiffre(VaultMemoire):
             "compteurs": {
                 dossier: dict(compteurs) for dossier, compteurs in self._compteurs.items()
             },
+            "modes": dict(self._modes),
         }
         octets = self._fernet.encrypt(json.dumps(contenu).encode("utf-8"))
         self._chemin.write_bytes(octets)
@@ -192,3 +215,4 @@ class VaultChiffre(VaultMemoire):
         for dossier, compteurs in contenu["compteurs"].items():
             for nom, numero in compteurs.items():
                 self._compteurs[dossier][nom] = numero
+        self._modes.update(contenu.get("modes", {}))

@@ -165,6 +165,18 @@ def test_les_ambiguites_sont_exposees():
     assert r.ambiguites == ["[PERSONNE_003]"]
 
 
+def test_les_ambiguites_sont_celles_de_l_appel_pas_du_dossier():
+    pseudo = Pseudonymiseur(
+        VaultMemoire(),
+        moteurs=[MoteurPersonnes("Jean Dupont", "Marie Dupont", "M. Dupont", "Karim Haddad")],
+    )
+    pseudo.pseudonymiser("Jean Dupont et Marie Dupont sont présents.", dossier_id="d1")
+    r2 = pseudo.pseudonymiser("M. Dupont a signé.", dossier_id="d1")
+    assert r2.ambiguites == ["[PERSONNE_003]"]
+    r3 = pseudo.pseudonymiser("Karim Haddad valide.", dossier_id="d1")
+    assert r3.ambiguites == []
+
+
 def test_les_ambiguites_remontent_dans_la_reponse_du_proxy():
     from fastapi.testclient import TestClient
 

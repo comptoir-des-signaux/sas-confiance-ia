@@ -119,6 +119,31 @@ def test_aller_retour_exact_avec_ner_sur_tout_le_corpus(moteur_ner):
         assert pseudo.reidentifier(resultat.texte, dossier_id="dossier-ner") == texte
 
 
+def test_aller_retour_a_la_forme_canonique_pres_avec_coreference(moteur_ner):
+    # Arbitrage Q1 : coréférence active (défaut), l'aller-retour restitue la
+    # forme canonique de chaque entité. Oracle indépendant : le texte
+    # ré-identifié doit être l'original où chaque empan détecté est remplacé
+    # par la valeur de restitution de son placeholder. Zéro placeholder ne
+    # doit subsister.
+    from sas_confiance_ia.pseudonymiseur import MOTIF_PLACEHOLDER
+
+    vault = VaultMemoire()
+    pseudo = Pseudonymiseur(vault, moteurs=[moteur_ner])
+    for chemin in sorted(CORPUS.rglob("*.md")):
+        if chemin.name == "README.md":
+            continue
+        texte = chemin.read_text(encoding="utf-8")
+        dossier = f"canonique-{chemin.name}"
+        resultat = pseudo.pseudonymiser(texte, dossier_id=dossier)
+        attendu = texte
+        for r in sorted(resultat.remplacements, key=lambda r: r.entite.debut, reverse=True):
+            canonique = vault.valeur_pour(dossier, r.placeholder)
+            attendu = attendu[: r.entite.debut] + canonique + attendu[r.entite.fin :]
+        rond = pseudo.reidentifier(resultat.texte, dossier_id=dossier)
+        assert rond == attendu, chemin.name
+        assert not MOTIF_PLACEHOLDER.search(rond), chemin.name
+
+
 def test_req_011_coreference_sur_le_dossier_multi_pieces(moteur_ner):
     # Acceptance REQ-011 sur le corpus réel : « Jean Dupont » (pièce 1) et
     # « M. Dupont » (pièce 2) reçoivent le même placeholder ; plus aucun

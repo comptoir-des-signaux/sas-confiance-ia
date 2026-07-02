@@ -12,13 +12,15 @@ Séparation démo / sérieux (REQ-007, 02-AI-SPEC §5) :
   peut plus servir en mode sérieux.
 """
 
+import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from .pseudonymiseur import Pseudonymiseur
+from .journal import Journal
+from .pseudonymiseur import MOTIF_PLACEHOLDER, Pseudonymiseur
 
 
 class RequetePseudonymisationUI(BaseModel):
@@ -32,12 +34,9 @@ class RequeteReidentificationUI(BaseModel):
     dossier_id: str
 
 
-def creer_routeur_ui(
-    pseudonymiseur: Pseudonymiseur,
-    dossiers_serieux: set[str],
-    dossiers_demo: set[str],
-) -> APIRouter:
+def creer_routeur_ui(pseudonymiseur: Pseudonymiseur, journal: Journal) -> APIRouter:
     routeur = APIRouter()
+    vault = pseudonymiseur.vault
 
     @routeur.get("/", response_class=HTMLResponse)
     def accueil() -> str:
@@ -46,22 +45,22 @@ def creer_routeur_ui(
     @routeur.post("/ui/pseudonymiser")
     def ui_pseudonymiser(requete: RequetePseudonymisationUI) -> dict[str, Any]:
         if requete.mode == "demo":
-            if dossiers_serieux:
+            if vault.un_dossier_serieux_existe():
                 raise HTTPException(
                     status_code=409,
                     detail="Le mode démonstration refuse de s'activer : le mode "
                     "sérieux a déjà des dossiers actifs dans cette instance "
-                    "(séparation REQ-007). Redémarrer une instance dédiée à la démo.",
+                    "(séparation REQ-007). Utiliser une instance dédiée à la démo.",
                 )
-            dossiers_demo.add(requete.dossier_id)
+            vault.marquer_dossier(requete.dossier_id, "demo")
         else:
-            if requete.dossier_id in dossiers_demo:
+            if vault.mode_dossier(requete.dossier_id) == "demo":
                 raise HTTPException(
                     status_code=409,
                     detail="Ce dossier a été utilisé en mode démonstration : il ne "
                     "peut plus servir en mode sérieux (séparation REQ-007).",
                 )
-            dossiers_serieux.add(requete.dossier_id)
+            vault.marquer_dossier(requete.dossier_id, "serieux")
 
         resultat = pseudonymiseur.pseudonymiser(requete.texte, dossier_id=requete.dossier_id)
         detections: list[dict[str, Any]] = []
@@ -87,6 +86,20 @@ def creer_routeur_ui(
 
     @routeur.post("/ui/reidentifier")
     def ui_reidentifier(requete: RequeteReidentificationUI) -> dict[str, str]:
+        # La ré-identification touche le vault : chaque appel est journalisé
+        # (métadonnées seules, REQ-003). Le sas v1 n'a pas d'authentification :
+        # son périmètre est la zone de confiance (voir QUESTIONS.md, Q2).
+        journal.enregistrer(
+            requete_id=str(uuid.uuid4()),
+            dossier_id=requete.dossier_id,
+            backend="ui",
+            modele="",
+            statut="reidentification_ui",
+            entites_par_type={
+                "placeholders_dans_le_texte": len(MOTIF_PLACEHOLDER.findall(requete.texte))
+            },
+            taille_approx=len(requete.texte),
+        )
         return {
             "texte": pseudonymiseur.reidentifier(
                 requete.texte, dossier_id=requete.dossier_id
@@ -197,6 +210,17 @@ PAGE_HTML = """<!DOCTYPE html>
 <script>
 const el = (id) => document.getElementById(id);
 
+// Tout contenu inséré via innerHTML passe par l'échappement (parade XSS).
+function echapper(texte) {
+  const div = document.createElement("div");
+  div.textContent = String(texte);
+  return div.innerHTML;
+}
+
+// Dossier non devinable par défaut : un identifiant prévisible facilite la
+// ré-identification par un tiers de la zone de confiance.
+el("dossier").value = "dossier-" + crypto.randomUUID().slice(0, 13);
+
 el("mode").addEventListener("change", () => {
   document.body.classList.toggle("demo-actif", el("mode").value === "demo");
 });
@@ -235,17 +259,17 @@ el("pseudonymiser").addEventListener("click", async () => {
 
 function afficherSynthese(donnees) {
   const lignes = Object.entries(donnees.comptes_par_type)
-    .map(([type, compte]) => `<tr><td>${type}</td><td>${compte}</td></tr>`)
+    .map(([type, compte]) => `<tr><td>${echapper(type)}</td><td>${echapper(compte)}</td></tr>`)
     .join("");
   let html = `<table><tr><th>Type détecté</th><th>Compte</th></tr>${lignes}</table>`;
   if (donnees.ambiguites_coreference.length) {
     html += `<p>Rattachements à vérifier (homonymes possibles) :
-      ${donnees.ambiguites_coreference.join(", ")}</p>`;
+      ${donnees.ambiguites_coreference.map(echapper).join(", ")}</p>`;
   }
   if (donnees.mode === "demo") {
     const details = donnees.detections
-      .map((d) => `<tr><td>${d.placeholder}</td><td>${d.type}</td>
-        <td>${d.valeur}</td><td>${d.score.toFixed(2)}</td></tr>`)
+      .map((d) => `<tr><td>${echapper(d.placeholder)}</td><td>${echapper(d.type)}</td>
+        <td>${echapper(d.valeur)}</td><td>${d.score.toFixed(2)}</td></tr>`)
       .join("");
     html += `<table><tr><th>Placeholder</th><th>Type</th><th>Valeur (démo)</th>
       <th>Score</th></tr>${details}</table>`;
