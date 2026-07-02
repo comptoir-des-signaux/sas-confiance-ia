@@ -1,6 +1,6 @@
 """Vault : table de correspondance placeholder ↔ valeur, scopée par dossier.
 
-Le vault ne quitte jamais la zone de confiance (invariant du 00-CONTEXT).
+Le vault ne quitte jamais la zone de confiance (invariant fondateur du projet).
 Ce module fournit l'interface commune et l'implémentation en mémoire du
 Lot 4 ; le vault persistant chiffré arrive au Lot 5 derrière la même interface.
 """

@@ -2,7 +2,7 @@
 
 **Statut :** v0.1 du 2026-07-01. Ce document s'adresse à tout agent (Claude
 Code ou autre) qui implémente Sas Confiance IA. Il prime sur toute habitude ou
-préférence de l'agent. Lire d'abord : 00-CONTEXT, 03-SPEC, 05-PLAN.
+préférence de l'agent. Lire d'abord : 01-PRD, 03-SPEC, 05-PLAN.
 
 ---
 

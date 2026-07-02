@@ -110,8 +110,9 @@ descriptif « sas de pseudonymisation avant IA ». Slug technique :
 « anonymisation » est exclu du nom (cadrage §6.5).
 
 **Conséquences.** La communication reste sobre : le nom dit la confiance
-construite par le sas, jamais une conformité garantie (formulations interdites
-du 00-CONTEXT §6). Le projet Écluse est suivi comme concurrent direct et
+construite par le sas, jamais une conformité garantie (formulations interdites :
+« IA 100 % conforme RGPD », « anonymisation garantie », « zéro risque »).
+Le projet Écluse est suivi comme concurrent direct et
 source d'étude (leur bench Presidio et leur générateur de corpus sont
 publics sous Apache-2.0).
 
