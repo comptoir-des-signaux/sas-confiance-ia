@@ -53,3 +53,26 @@ ré-identification UI journalisée (métadonnées seules). Toute exposition
 au-delà de la boucle locale est un choix explicite de déploiement, documenté
 comme hors périmètre v1. L'authentification (jeton par dossier ou frontal)
 est un chantier de Phase 2 à arbitrer avec les topologies T2-T4.
+
+## Q3 : afficher le texte d'origine en mode sérieux (côte à côte pédagogique)
+
+**Constat (2026-07-02, préparation Phase 2).** L'interface de référence
+(rbochet/amo-presidio) et le besoin pédagogique des ateliers appellent un
+affichage côte à côte du texte d'origine et du texte pseudonymisé, avec
+mise en évidence des entités détectées. Or la règle du mode sérieux (Lot 12)
+était « types, positions, scores et comptes, jamais de valeur ».
+
+**Arbitrage (Pascal Chevallot, 2026-07-02) : côte à côte dans les deux modes.**
+
+- Le document affiché appartient à l'utilisateur et reste dans sa boucle
+  locale : le montrer à côté du texte pseudonymisé, entités surlignées, ne
+  révèle rien qu'il ne possède déjà. L'affichage est admis en mode sérieux
+  comme en mode démo.
+- La règle du mode sérieux se précise ainsi : la **réponse du serveur** ne
+  contient jamais les valeurs détectées ni le vault ; le surlignage se
+  calcule **côté client** à partir des positions (début/fin) déjà exposées,
+  sur le texte que le navigateur détient. Le contrat d'API du mode sérieux
+  est inchangé.
+- Pour les fichiers (Lot 15), le texte extrait par le serveur revient au
+  navigateur : c'est le document de l'utilisateur, pas une valeur du vault.
+  Le journal reste en métadonnées seules (REQ-003).

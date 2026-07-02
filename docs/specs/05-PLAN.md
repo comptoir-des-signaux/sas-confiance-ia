@@ -107,14 +107,36 @@ surrogates genrés optionnels (Faker fr_FR).
 **REQ :** 008, 012.
 
 ### Lot 15 : fichiers
-Ingestion `.txt`, `.md`, `.docx`, `.pdf` textuel ; refus documenté des PDF
-scannés.
+Ingestion `.txt`, `.md`, `.docx` (paragraphes et tableaux), `.pdf` textuel ;
+refus documenté des PDF scannés. Côté UI (enrichissement acté le 2026-07-02,
+inspiré de rbochet/amo-presidio) : page Fichiers avec dépôt par glisser-déposer,
+affichage côte à côte du texte d'origine et du texte pseudonymisé avec entités
+surlignées côté client (arbitrage Q3), exports `.txt` et `.docx`. Le PDF
+caviardé (PyMuPDF, licence AGPL : compatible EUPL-1.2 mais contaminante) est
+un extra optionnel à trancher pendant le lot.
 
 ### Lot 16 : publication du commun
 MkDocs Material + GitHub Pages, tutoriel d'installation Kubuntu / Docker,
 parcours formateur, CONTRIBUTING, checklist de publication, scan de secrets
 sur l'historique.
 **REQ :** 015.
+
+## Phase 3 : pistes actées (2026-07-02), à spécifier après le lot 16
+
+Non planifiées en lots : elles exigent d'abord une extension du 02-AI-SPEC.
+
+- **Boucle d'anonymisation** inspirée de la conception d'ecluse-dev/ecluse
+  (Apache-2.0, non implémentée chez eux) : mesurer un risque de
+  ré-identification par faisceau d'indices (1/F, k-anonymat), généraliser les
+  quasi-identifiants par hiérarchies françaises (commune→département→région,
+  âge→tranche, pathologie en dernier recours), re-mesurer jusqu'au seuil ;
+  trois sorties (succès, garde-fou, épuisement qui rend la main à l'humain).
+  Pertinent pour les données médico-sociales des collectivités (PAP,
+  DYS/TDAH, allocations handicap des départements).
+- **Détecteur RPPS** (professionnels de santé, Luhn) pour le médico-social.
+- **Générateur de corpus à pièges** (valeurs à clés invalides non annotées)
+  et scoreur strict/souple repris du bench d'Écluse (Python, Apache-2.0,
+  attribution requise) : mesurer notre taux de faux positifs.
 
 ---
 
