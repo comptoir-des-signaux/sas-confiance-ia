@@ -93,6 +93,107 @@ def test_pseudonymisation_avec_moteur_additionnel():
     assert pseudo.reidentifier(resultat.texte, dossier_id="d1") == texte
 
 
+class MoteurPersonnes:
+    """Faux NER : détecte des mentions de personnes fixées à l'avance."""
+
+    def __init__(self, *mentions: str) -> None:
+        self._mentions = mentions
+
+    def reconnaitre(self, texte: str):
+        from sas_confiance_ia.detection import EntiteDetectee
+
+        entites = []
+        for mention in self._mentions:
+            debut = texte.find(mention)
+            if debut >= 0:
+                entites.append(
+                    EntiteDetectee(
+                        type="PERSONNE",
+                        debut=debut,
+                        fin=debut + len(mention),
+                        score=0.9,
+                        valeur=mention,
+                    )
+                )
+        return entites
+
+
+def test_req_011_meme_placeholder_entre_deux_pieces():
+    # Acceptance REQ-011 : « Jean Dupont » (pièce 1) et « M. Dupont »
+    # (pièce 2) reçoivent le même [PERSONNE_001] dans le même dossier.
+    pseudo = Pseudonymiseur(
+        VaultMemoire(), moteurs=[MoteurPersonnes("Jean Dupont", "M. Dupont")]
+    )
+    r1 = pseudo.pseudonymiser("Jean Dupont conteste la décision.", dossier_id="d1")
+    r2 = pseudo.pseudonymiser("La réclamation de M. Dupont est fondée.", dossier_id="d1")
+    assert "[PERSONNE_001]" in r1.texte
+    assert "[PERSONNE_001]" in r2.texte
+    assert "Dupont" not in r2.texte
+
+
+def test_la_reidentification_restaure_la_forme_canonique():
+    # Arbitrage Q1 (QUESTIONS.md) : la restitution est la forme la plus
+    # complète connue, pas la forme de surface de chaque mention.
+    pseudo = Pseudonymiseur(
+        VaultMemoire(), moteurs=[MoteurPersonnes("Jean Dupont", "M. Dupont")]
+    )
+    pseudo.pseudonymiser("Jean Dupont conteste la décision.", dossier_id="d1")
+    r2 = pseudo.pseudonymiser("La réclamation de M. Dupont est fondée.", dossier_id="d1")
+    assert pseudo.reidentifier(r2.texte, dossier_id="d1") == (
+        "La réclamation de Jean Dupont est fondée."
+    )
+
+
+def test_sans_coreference_l_aller_retour_reste_exact_au_caractere_pres():
+    pseudo = Pseudonymiseur(
+        VaultMemoire(),
+        moteurs=[MoteurPersonnes("Jean Dupont", "M. Dupont")],
+        coreference=False,
+    )
+    for texte in ["Jean Dupont conteste.", "La réclamation de M. Dupont est fondée."]:
+        r = pseudo.pseudonymiser(texte, dossier_id="d1")
+        assert pseudo.reidentifier(r.texte, dossier_id="d1") == texte
+
+
+def test_les_ambiguites_sont_exposees():
+    pseudo = Pseudonymiseur(
+        VaultMemoire(),
+        moteurs=[MoteurPersonnes("Jean Dupont", "Marie Dupont", "M. Dupont")],
+    )
+    pseudo.pseudonymiser("Jean Dupont et Marie Dupont sont présents.", dossier_id="d1")
+    r = pseudo.pseudonymiser("M. Dupont a signé.", dossier_id="d1")
+    assert r.ambiguites == ["[PERSONNE_003]"]
+
+
+def test_les_ambiguites_remontent_dans_la_reponse_du_proxy():
+    from fastapi.testclient import TestClient
+
+    from sas_confiance_ia.api import creer_application
+    from sas_confiance_ia.backends import BackendCapture
+
+    application = creer_application(
+        pseudonymiseur=Pseudonymiseur(
+            VaultMemoire(),
+            moteurs=[MoteurPersonnes("Jean Dupont", "Marie Dupont", "M. Dupont")],
+        ),
+        backend=BackendCapture(),
+        modeles=["modele-de-test"],
+    )
+    client = TestClient(application)
+
+    def completion(texte: str) -> dict:
+        return client.post(
+            "/v1/chat/completions",
+            json={"model": "modele-de-test", "messages": [{"role": "user", "content": texte}]},
+            headers={"X-Dossier-Id": "d1"},
+        ).json()
+
+    corps = completion("Jean Dupont et Marie Dupont sont présents.")
+    assert corps["sas_confiance_ia"]["ambiguites_coreference"] == []
+    corps = completion("M. Dupont a signé.")
+    assert corps["sas_confiance_ia"]["ambiguites_coreference"] == ["[PERSONNE_003]"]
+
+
 def test_comptes_par_type_pour_le_journal():
     # REQ-003 : le journal ne connaît que des comptes par type, jamais les valeurs.
     pseudo = nouveau()

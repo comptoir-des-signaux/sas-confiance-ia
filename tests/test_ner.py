@@ -106,14 +106,41 @@ def test_le_nir_reste_prioritaire_sur_le_ner(moteur_ner):
 
 
 def test_aller_retour_exact_avec_ner_sur_tout_le_corpus(moteur_ner):
-    # REQ-002 tenue au périmètre complet : la réversibilité survit au NER.
-    pseudo = Pseudonymiseur(VaultMemoire(), moteurs=[moteur_ner])
+    # REQ-002 tenue au périmètre complet : la réversibilité au caractère
+    # près survit au NER. Coréférence désactivée ici : avec elle, la
+    # restitution est la forme canonique (arbitrage Q1, QUESTIONS.md),
+    # vérifiée par test_req_011_coreference_sur_le_dossier_multi_pieces.
+    pseudo = Pseudonymiseur(VaultMemoire(), moteurs=[moteur_ner], coreference=False)
     for chemin in sorted(CORPUS.rglob("*.md")):
         if chemin.name == "README.md":
             continue
         texte = chemin.read_text(encoding="utf-8")
         resultat = pseudo.pseudonymiser(texte, dossier_id="dossier-ner")
         assert pseudo.reidentifier(resultat.texte, dossier_id="dossier-ner") == texte
+
+
+def test_req_011_coreference_sur_le_dossier_multi_pieces(moteur_ner):
+    # Acceptance REQ-011 sur le corpus réel : « Jean Dupont » (pièce 1) et
+    # « M. Dupont » (pièce 2) reçoivent le même placeholder ; plus aucun
+    # « Dupont » ne subsiste dans les textes pseudonymisés.
+    pseudo = Pseudonymiseur(VaultMemoire(), moteurs=[moteur_ner])
+    r1 = pseudo.pseudonymiser(
+        (CORPUS / "04-dossier-usager/piece-1-courrier.md").read_text(encoding="utf-8"),
+        dossier_id="dossier-011",
+    )
+    r2 = pseudo.pseudonymiser(
+        (CORPUS / "04-dossier-usager/piece-2-note-interne.md").read_text(encoding="utf-8"),
+        dossier_id="dossier-011",
+    )
+    assert "Dupont" not in r1.texte
+    assert "Dupont" not in r2.texte
+    (placeholder_jean,) = {
+        r.placeholder for r in r1.remplacements if "Dupont" in r.entite.valeur
+    }
+    placeholders_piece_2 = {
+        r.placeholder for r in r2.remplacements if "Dupont" in r.entite.valeur
+    }
+    assert placeholders_piece_2 == {placeholder_jean}
 
 
 def test_pseudonymisation_efface_les_noms(moteur_ner):

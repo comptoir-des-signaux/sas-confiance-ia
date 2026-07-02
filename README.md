@@ -51,11 +51,17 @@ streaming refusé (REQ-010). La détection s'appuie sur le NER français
 CamemBERT (modèle épinglé, rappel et précision
 [mesurés et publiés](docs/eval/evaluation-ner.md)) et le proxy parle à tout
 backend OpenAI-compatible par simple configuration (REQ-013) : Ollama local,
-Infomaniak, Scaleway... Voir [`docs/deploiement.md`](docs/deploiement.md)
+Infomaniak, Scaleway... La coréférence par dossier (REQ-011) rattache les
+mentions d'une même personne (« Jean Dupont », « M. Dupont ») au même
+placeholder entre les pièces d'un dossier ; la ré-identification restitue la
+forme la plus complète connue et les rattachements ambigus sont signalés
+pour revue, jamais fusionnés (limite documentée dans
+[`docs/specs/QUESTIONS.md`](docs/specs/QUESTIONS.md)). Voir
+[`docs/deploiement.md`](docs/deploiement.md)
 pour l'installation Docker et la validation manuelle,
 [`docs/specs/`](docs/specs/) pour le cadrage complet et
 [`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md) pour la feuille de route
-(prochains lots : coréférence par dossier, interface web).
+(prochain lot : interface web).
 
 ## Démarrage (développement)
 

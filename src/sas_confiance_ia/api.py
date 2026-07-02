@@ -88,11 +88,13 @@ def creer_application(
         messages_pseudonymises = []
         placeholders_envoyes: set[str] = set()
         entites_par_type: dict[str, int] = {}
+        ambiguites_coreference: set[str] = set()
         for message in requete.messages:
             resultat = pseudonymiseur.pseudonymiser(message.content, dossier_id=dossier_id)
             placeholders_envoyes.update(r.placeholder for r in resultat.remplacements)
             for type_, compte in resultat.comptes_par_type.items():
                 entites_par_type[type_] = entites_par_type.get(type_, 0) + compte
+            ambiguites_coreference.update(resultat.ambiguites)
             messages_pseudonymises.append({"role": message.role, "content": resultat.texte})
 
         if placeholders_envoyes:
@@ -164,6 +166,10 @@ def creer_application(
                 "dossier_id": dossier_id,
                 "integrite": rapport.en_dict(),
                 "reidentifie": reidentifie,
+                # Placeholders PERSONNE créés faute de rattachement sûr
+                # (REQ-011, F4) : à faire vérifier par un humain. Seuls les
+                # placeholders sont exposés, jamais les valeurs.
+                "ambiguites_coreference": sorted(ambiguites_coreference),
             },
         }
 
