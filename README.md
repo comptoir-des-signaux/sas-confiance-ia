@@ -65,8 +65,13 @@ Une interface web minimale est servie à la racine (`http://127.0.0.1:8787/`) :
 coller un texte, pseudonymiser, ré-identifier ; le mode sérieux n'affiche
 jamais les valeurs détectées (types, positions et comptes seulement), le mode
 démonstration (bandeau distinct, données synthétiques) refuse de s'activer si
-des dossiers sérieux sont actifs dans l'instance. Phase 1 complète ;
-prochaine phase : juge LLM local, politiques par type, fichiers.
+des dossiers sérieux sont actifs dans l'instance. Phase 1 complète.
+**Phase 2 en cours (lot 13 livré)** : un juge LLM local optionnel (REQ-014)
+relit le texte déjà pseudonymisé et signale les identifiants indirects
+(fonction rare, petite commune, surnom, périphrase) pour revue humaine,
+jamais en remplacement automatique ; couverture
+[mesurée et publiée sur les canaris](docs/eval/evaluation-juge.md).
+Prochains lots : politiques par type, fichiers, publication.
 
 ## Démarrage (développement)
 
@@ -101,6 +106,26 @@ Au lancement du proxy, le NER est actif par défaut et **fail-closed** : si
 le moteur demandé n'est pas chargeable, le sas refuse de démarrer plutôt
 que de tourner silencieusement avec une couverture réduite. Un sas sans
 NER se choisit explicitement (`SAS_NER=inactif`).
+
+### Juge LLM local (identifiants indirects)
+
+Troisième couche de détection, optionnelle par conception : un LLM local
+(Ollama) relit le texte déjà pseudonymisé et signale pour revue humaine les
+identifiants indirects que regex et NER manquent (« le chef du service
+assainissement de la petite commune », surnoms, périphrases). Ses candidats
+ne sont jamais remplacés automatiquement, et il n'appelle jamais un service
+distant (un test réseau l'interdit activement).
+
+```bash
+SAS_JUGE_BASE_URL=http://localhost:11434/v1 \
+SAS_JUGE_MODELE=mistral-small:24b \
+python -m sas_confiance_ia
+```
+
+Sans ces variables, le sas fonctionne et se documente comme moins couvrant.
+Couverture mesurée sur les canaris :
+[docs/eval/evaluation-juge.md](docs/eval/evaluation-juge.md) (référence :
+mistral-small:24b, 5/6 ; un modèle 4B n'en signale que 2/6).
 
 ## Crédits
 
