@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from .journal import Journal
 from .juge import JugeLLM, executer_passe
+from .politique import valider_actions
 from .pseudonymiseur import MOTIF_PLACEHOLDER, Pseudonymiseur
 
 
@@ -28,6 +29,9 @@ class RequetePseudonymisationUI(BaseModel):
     texte: str
     dossier_id: str
     mode: Literal["serieux", "demo"] = "serieux"
+    # Politique de remplacement du dossier (Lot 14, cadrage §9.5) : définie à
+    # la première requête qui la porte, elle vit ensuite dans le vault.
+    politiques: dict[str, str] | None = None
 
 
 class RequeteReidentificationUI(BaseModel):
@@ -66,6 +70,15 @@ def creer_routeur_ui(
                     "peut plus servir en mode sérieux (séparation REQ-007).",
                 )
             vault.marquer_dossier(requete.dossier_id, "serieux")
+
+        if requete.politiques is not None:
+            try:
+                valider_actions(requete.politiques)
+            except ValueError as erreur:
+                # Une politique fautive ne dégrade jamais la couverture en
+                # silence : requête refusée, rien n'est stocké.
+                raise HTTPException(status_code=422, detail=str(erreur)) from erreur
+            vault.definir_politique(requete.dossier_id, {"actions": requete.politiques})
 
         requete_id = str(uuid.uuid4())
         resultat = pseudonymiseur.pseudonymiser(requete.texte, dossier_id=requete.dossier_id)
@@ -123,6 +136,9 @@ def creer_routeur_ui(
             "comptes_par_type": resultat.comptes_par_type,
             "detections": detections,
             "ambiguites_coreference": resultat.ambiguites,
+            # Placeholders masqués par une politique « revue » (Lot 14) : à
+            # faire relire par un humain, jamais de valeur.
+            "entites_en_revue": resultat.en_revue,
             "juge": bloc_juge,
         }
 

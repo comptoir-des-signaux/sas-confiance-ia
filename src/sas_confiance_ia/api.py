@@ -17,7 +17,7 @@ from .backends import Backend, ErreurBackend
 from .integrite import controler, normaliser_placeholders
 from .journal import Journal
 from .juge import JugeLLM, executer_passe
-from .pseudonymiseur import Pseudonymiseur
+from .pseudonymiseur import MOTIF_PLACEHOLDER, Pseudonymiseur
 
 # Parade F5 (02-AI-SPEC §3) : le LLM applicatif altère volontiers les
 # jetons (crochets perdus, casse, faute sur le type, constaté sur
@@ -116,12 +116,22 @@ def creer_application(
         placeholders_envoyes: set[str] = set()
         entites_par_type: dict[str, int] = {}
         ambiguites_coreference: set[str] = set()
+        entites_en_revue: set[str] = set()
         for message in requete.messages:
             resultat = pseudonymiseur.pseudonymiser(message.content, dossier_id=dossier_id)
-            placeholders_envoyes.update(r.placeholder for r in resultat.remplacements)
+            # Seuls les placeholders numérotés (réversibles) participent au
+            # contrôle d'intégrité : un marqueur de masquage [TYPE] sans
+            # numéro (Lot 14) n'a pas d'entrée vault et n'est jamais attendu
+            # dans la réponse.
+            placeholders_envoyes.update(
+                r.placeholder
+                for r in resultat.remplacements
+                if MOTIF_PLACEHOLDER.fullmatch(r.placeholder)
+            )
             for type_, compte in resultat.comptes_par_type.items():
                 entites_par_type[type_] = entites_par_type.get(type_, 0) + compte
             ambiguites_coreference.update(resultat.ambiguites)
+            entites_en_revue.update(resultat.en_revue)
             messages_pseudonymises.append({"role": message.role, "content": resultat.texte})
 
         # Passe juge (C3, REQ-014) sur le SEUL dernier message pseudonymisé :
@@ -238,6 +248,9 @@ def creer_application(
                 # (REQ-011, F4) : à faire vérifier par un humain. Seuls les
                 # placeholders sont exposés, jamais les valeurs.
                 "ambiguites_coreference": sorted(ambiguites_coreference),
+                # Placeholders masqués par une politique « revue » (Lot 14) :
+                # partis pseudonymisés vers le backend, à faire relire.
+                "entites_en_revue": sorted(entites_en_revue),
                 # Candidats d'identifiants indirects signalés par le juge
                 # LLM local (C3) : à revoir par un humain, jamais remplacés
                 # automatiquement en v1 (REQ-014, parade F7).

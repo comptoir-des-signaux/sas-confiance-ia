@@ -75,6 +75,10 @@ class Vault(Protocol):
 
     def un_dossier_serieux_existe(self) -> bool: ...
 
+    def definir_politique(self, dossier_id: str, politique: dict) -> None: ...
+
+    def politique_dossier(self, dossier_id: str) -> dict | None: ...
+
 
 class VaultMemoire:
     """Vault en mémoire : correspondances et compteurs par dossier et par type."""
@@ -89,6 +93,9 @@ class VaultMemoire:
         # dossier -> mode (serieux / demo) : la séparation REQ-007 vit avec
         # les données, pas dans la mémoire du processus.
         self._modes: dict[str, str] = {}
+        # dossier -> politique de remplacement (Lot 14) : elle vit avec les
+        # données pour la même raison que le mode.
+        self._politiques: dict[str, dict] = {}
 
     def placeholder_pour(self, dossier_id: str, type_: str, valeur: str) -> str:
         cle = (type_, valeur)
@@ -136,6 +143,12 @@ class VaultMemoire:
     def un_dossier_serieux_existe(self) -> bool:
         return any(mode == "serieux" for mode in self._modes.values())
 
+    def definir_politique(self, dossier_id: str, politique: dict) -> None:
+        self._politiques[dossier_id] = politique
+
+    def politique_dossier(self, dossier_id: str) -> dict | None:
+        return self._politiques.get(dossier_id)
+
 
 def generer_cle() -> bytes:
     """Génère une clé de chiffrement Fernet (à conserver hors du dépôt)."""
@@ -178,6 +191,10 @@ class VaultChiffre(VaultMemoire):
         super().marquer_dossier(dossier_id, mode)
         self._persister()
 
+    def definir_politique(self, dossier_id: str, politique: dict) -> None:
+        super().definir_politique(dossier_id, politique)
+        self._persister()
+
     def purger(self, dossier_id: str) -> None:
         """Efface définitivement les correspondances d'un dossier (cadrage §9.6)."""
         self._par_valeur.pop(dossier_id, None)
@@ -207,6 +224,7 @@ class VaultChiffre(VaultMemoire):
                 dossier: dict(compteurs) for dossier, compteurs in self._compteurs.items()
             },
             "modes": dict(self._modes),
+            "politiques": dict(self._politiques),
         }
         octets = self._fernet.encrypt(json.dumps(contenu).encode("utf-8"))
         self._chemin.write_bytes(octets)
@@ -226,3 +244,5 @@ class VaultChiffre(VaultMemoire):
             for nom, numero in compteurs.items():
                 self._compteurs[dossier][nom] = numero
         self._modes.update(contenu.get("modes", {}))
+        # Lecture tolérante : les vaults antérieurs au Lot 14 n'ont pas de politique.
+        self._politiques.update(contenu.get("politiques", {}))

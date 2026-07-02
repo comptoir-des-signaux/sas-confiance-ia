@@ -16,6 +16,7 @@ endpoint OpenAI-compatible) ne demande qu'un changement de configuration.
 | SAS_JUGE_MODELE | modèle du juge (requis si base URL fournie) | aucun |
 | SAS_JUGE_SCORE_MIN | score minimal des candidats du juge | 0.5 |
 | SAS_JUGE_TIMEOUT_SECONDES | timeout dédié de la passe juge | 60 |
+| SAS_POLITIQUES | politiques par type « TYPE=action,... » (§9.5) | aucune (tout pseudonymisé) |
 
 Défauts protecteurs : sans chemin ET clé, le vault reste en mémoire (rien
 n'est écrit sur disque) ; le NER est actif par défaut et **fail-closed** :
@@ -38,6 +39,7 @@ from urllib.parse import urlsplit
 from .api import creer_application
 from .backends import DELAI_DEFAUT_SECONDES, BackendOpenAICompatible
 from .juge import SCORE_MIN_DEFAUT, JugeLLM
+from .politique import ACTION_CONSERVER, Politique, analyser_politiques
 from .pseudonymiseur import Pseudonymiseur
 from .vault import Vault, VaultChiffre, VaultMemoire
 
@@ -79,6 +81,7 @@ class Configuration:
     juge_modele: str | None
     juge_score_min: float
     juge_timeout: float
+    politiques: dict[str, str]
 
     def creer_juge(self) -> JugeLLM | None:
         """Juge C3 optionnel et dégradable (REQ-014) : absent = documenté.
@@ -225,6 +228,20 @@ def charger_configuration(env: Mapping[str, str] | None = None) -> Configuration
             f"SAS_JUGE_TIMEOUT_SECONDES={juge_timeout_brut!r} invalide : "
             "nombre de secondes attendu"
         ) from exc
+    politiques_brut = (env.get("SAS_POLITIQUES") or "").strip()
+    try:
+        politiques = analyser_politiques(politiques_brut)
+    except ValueError as exc:
+        raise ConfigurationInvalide(f"SAS_POLITIQUES : {exc}") from exc
+    for type_, action in politiques.items():
+        if action == ACTION_CONSERVER:
+            # Couverture dégradée toujours explicite : conserver un type
+            # détectable est un choix, il laisse une trace au démarrage.
+            _journal.warning(
+                "SAS_POLITIQUES : le type %s est configuré en « conserver », "
+                "ses valeurs partiront EN CLAIR vers le backend (choix explicite).",
+                type_,
+            )
     timeout_brut = (env.get("SAS_BACKEND_TIMEOUT_SECONDES") or "").strip()
     try:
         backend_timeout = float(timeout_brut) if timeout_brut else DELAI_DEFAUT_SECONDES
@@ -245,6 +262,7 @@ def charger_configuration(env: Mapping[str, str] | None = None) -> Configuration
         juge_modele=juge_modele,
         juge_score_min=juge_score_min,
         juge_timeout=juge_timeout,
+        politiques=politiques,
     )
 
 
@@ -256,7 +274,11 @@ def creer_application_depuis_environnement(env: Mapping[str, str] | None = None)
         cle_api=config.backend_cle_api,
         timeout=config.backend_timeout,
     )
-    pseudonymiseur = Pseudonymiseur(config.creer_vault(), moteurs=config.creer_moteurs())
+    pseudonymiseur = Pseudonymiseur(
+        config.creer_vault(),
+        moteurs=config.creer_moteurs(),
+        politique=Politique(actions=config.politiques),
+    )
     return creer_application(
         pseudonymiseur=pseudonymiseur,
         backend=backend,

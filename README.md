@@ -130,6 +130,26 @@ Couverture mesurée sur les canaris :
 [docs/eval/evaluation-juge.md](docs/eval/evaluation-juge.md) (référence :
 mistral-small:24b, 5/6 ; un modèle 4B n'en signale que 2/6).
 
+### Politiques de remplacement par type
+
+Chaque type d'entité détecté suit une politique (cadrage §9.5) :
+`pseudonymiser` (défaut, réversible par le vault), `masquer` (marqueur
+`[TYPE]` sans numéro, sans entrée vault, irréversible), `conserver` (choix
+explicite, tracé en avertissement au démarrage) ou `revue` (pseudonymisé et
+signalé pour relecture humaine dans `entites_en_revue`).
+
+Défauts d'instance par variable d'environnement :
+
+```bash
+SAS_POLITIQUES="FR_SIREN=conserver,REFERENCE_DOSSIER=revue" python -m sas_confiance_ia
+```
+
+Chaque dossier peut surcharger ces défauts (champ `politiques` de
+`/ui/pseudonymiser`) : la politique du dossier est stockée dans le vault et
+survit au redémarrage, comme la séparation démo / sérieux. Une action ou un
+type inconnu est refusé : une faute de frappe ne dégrade jamais la
+couverture en silence.
+
 ## Crédits
 
 - Les validateurs français (clé NIR avec cas Corse 2A/2B, Luhn SIREN / SIRET)
