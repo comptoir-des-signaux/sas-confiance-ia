@@ -15,6 +15,8 @@ dependencies = [
   "cryptography>=43",
   "uvicorn>=0.30",
   "httpx2",
+  # Surrogates réalistes fr_FR (REQ-012), licence MIT compatible EUPL-1.2.
+  "faker>=30",
 ]
 
 [project.optional-dependencies]

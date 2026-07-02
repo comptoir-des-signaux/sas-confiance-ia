@@ -150,6 +150,16 @@ survit au redémarrage, comme la séparation démo / sérieux. Une action ou un
 type inconnu est refusé : une faute de frappe ne dégrade jamais la
 couverture en silence.
 
+**Surrogates réalistes (REQ-012).** Option par dossier : les personnes
+reçoivent un nom factice Faker fr_FR cohérent en genre (« Camille Roussel »)
+au lieu de `[PERSONNE_001]`, pour un texte naturel à soumettre au modèle.
+La réversibilité passe toujours par le vault : le surrogate n'est qu'un
+rendu, stable sur tout le dossier. Contrepartie assumée (arbitrage Q5,
+`docs/specs/QUESTIONS.md`) : un surrogate que le LLM altère (« Mme
+Roussel ») n'est ni restauré ni détecté, là où un placeholder altéré est
+rattrapé par la lecture tolérante. Le mode placeholder reste le défaut.
+Portée v1 : personnes uniquement.
+
 **Dates différenciées (REQ-008).** La date de naissance (« née le 12 mai
 1985 », « Date de naissance : 28/09/1986 ») est masquée par défaut. Les
 dates procédurales (décision, séance, accident) sont détectées, comptées et

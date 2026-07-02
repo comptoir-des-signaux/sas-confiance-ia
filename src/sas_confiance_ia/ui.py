@@ -32,6 +32,8 @@ class RequetePseudonymisationUI(BaseModel):
     # Politique de remplacement du dossier (Lot 14, cadrage §9.5) : définie à
     # la première requête qui la porte, elle vit ensuite dans le vault.
     politiques: dict[str, str] | None = None
+    # Surrogates réalistes (REQ-012) : option par dossier, placeholder sinon.
+    surrogates: bool | None = None
 
 
 class RequeteReidentificationUI(BaseModel):
@@ -71,14 +73,32 @@ def creer_routeur_ui(
                 )
             vault.marquer_dossier(requete.dossier_id, "serieux")
 
-        if requete.politiques is not None:
-            try:
-                valider_actions(requete.politiques)
-            except ValueError as erreur:
-                # Une politique fautive ne dégrade jamais la couverture en
-                # silence : requête refusée, rien n'est stocké.
-                raise HTTPException(status_code=422, detail=str(erreur)) from erreur
-            vault.definir_politique(requete.dossier_id, {"actions": requete.politiques})
+        if requete.politiques is not None or requete.surrogates is not None:
+            if requete.politiques is not None:
+                try:
+                    valider_actions(requete.politiques)
+                except ValueError as erreur:
+                    # Une politique fautive ne dégrade jamais la couverture
+                    # en silence : requête refusée, rien n'est stocké.
+                    raise HTTPException(status_code=422, detail=str(erreur)) from erreur
+            # Chaque champ absent garde sa valeur déjà stockée : la requête
+            # ne redéfinit que ce qu'elle porte.
+            existante = vault.politique_dossier(requete.dossier_id) or {}
+            vault.definir_politique(
+                requete.dossier_id,
+                {
+                    "actions": (
+                        requete.politiques
+                        if requete.politiques is not None
+                        else existante.get("actions", {})
+                    ),
+                    "surrogates": (
+                        requete.surrogates
+                        if requete.surrogates is not None
+                        else existante.get("surrogates", False)
+                    ),
+                },
+            )
 
         requete_id = str(uuid.uuid4())
         resultat = pseudonymiseur.pseudonymiser(requete.texte, dossier_id=requete.dossier_id)
@@ -129,6 +149,8 @@ def creer_routeur_ui(
             if requete.mode == "demo":
                 detection["valeur"] = entite.valeur
                 detection["placeholder"] = remplacement.placeholder
+                if remplacement.surrogate is not None:
+                    detection["surrogate"] = remplacement.surrogate
             detections.append(detection)
         return {
             "mode": requete.mode,
@@ -247,6 +269,13 @@ PAGE_HTML = """<!DOCTYPE html>
         <option value="pseudonymiser">Pseudonymiser</option>
       </select>
     </div>
+    <div>
+      <label for="surrogates">Noms factices</label>
+      <select id="surrogates">
+        <option value="non" selected>Placeholders [PERSONNE_001] (défaut)</option>
+        <option value="oui">Surrogates réalistes (intégrité réduite)</option>
+      </select>
+    </div>
     <button id="pseudonymiser">Pseudonymiser</button>
     <button id="reidentifier" class="secondaire" disabled>Ré-identifier une réponse</button>
     <button id="exemple" class="secondaire">Charger un exemple (mode démo)</button>
@@ -334,8 +363,10 @@ el("pseudonymiser").addEventListener("click", async () => {
       dossier_id: el("dossier").value,
       mode: el("mode").value,
       // Politique du dossier (Lot 14) : la date de naissance reste masquée
-      // par défaut, les dates procédurales suivent ce choix (REQ-008).
+      // par défaut, les dates procédurales suivent ce choix (REQ-008) ; les
+      // surrogates réalistes sont un choix par dossier (REQ-012, Q5).
       politiques: { DATE_PROCEDURALE: el("dates").value },
+      surrogates: el("surrogates").value === "oui",
     });
     el("sortie").value = donnees.texte;
     el("resultat").style.display = "block";

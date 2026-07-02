@@ -146,7 +146,10 @@ def creer_application(
         texte_juge = messages_pseudonymises[index_dernier]["content"]
         reference_juge = requete.messages[index_dernier].content
 
-        if placeholders_envoyes:
+        # La consigne ne part que si des jetons figurent réellement dans le
+        # payload : en mode surrogate intégral (Lot 14), le texte ne porte
+        # que des noms factices et la consigne n'aurait rien à protéger.
+        if any(MOTIF_PLACEHOLDER.search(m["content"]) for m in messages_pseudonymises):
             messages_pseudonymises.insert(
                 0, {"role": "system", "content": CONSIGNE_PRESERVATION_JETONS}
             )
@@ -192,8 +195,12 @@ def creer_application(
 
         # Contrôle d'intégrité (REQ-006) : lecture tolérante des placeholders
         # altérés, blocage de la ré-identification en présence d'un inconnu.
+        # Les surrogates (REQ-012) repassent d'abord par leur placeholder :
+        # un surrogate omis se voit ainsi signalé « manquant » ; un surrogate
+        # altéré par le LLM n'est pas restaurable (limite assumée, Q5).
         placeholders_connus = pseudonymiseur.placeholders_connus(dossier_id)
-        contenu = normaliser_placeholders(reponse.contenu, connus=placeholders_connus)
+        contenu = pseudonymiseur.restaurer_surrogates(reponse.contenu, dossier_id)
+        contenu = normaliser_placeholders(contenu, connus=placeholders_connus)
         rapport = controler(
             contenu,
             placeholders_envoyes=placeholders_envoyes,

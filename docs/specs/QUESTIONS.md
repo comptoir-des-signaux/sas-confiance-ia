@@ -116,3 +116,38 @@ pathologies restent en clair PAR CONCEPTION (utilité métier : politiques par
 type au Lot 14, généralisation en Phase 3) ; la coréférence ne rattache que
 les PERSONNE (une ORGANISATION peut recevoir deux placeholders selon la
 forme de surface).
+
+## Q5 : surrogates réalistes contre contrôle d'intégrité (REQ-012 contre F5)
+
+**Constat (2026-07-02, Lot 14).** En mode surrogate, le placeholder devient
+un nom factice (« Camille Roussel » pour `[PERSONNE_001]`). La lecture
+tolérante de l'intégrité (F5 : crochets perdus, casse, faute sur le type)
+n'a plus de motif structurel à raccrocher : si le LLM répond « Mme
+Roussel », rien ne distingue un surrogate altéré d'un nom inventé par le
+modèle, et la ré-identification de cette mention échoue sans blocage
+possible. La consigne de préservation des jetons n'a pas non plus d'objet
+sur un nom factice.
+
+**Arbitrage (Pascal Chevallot, 2026-07-02) : assumer et documenter.**
+
+- Le mode surrogate est un choix par dossier, jamais un défaut d'instance :
+  le mode placeholder reste le défaut protecteur, à intégrité pleine.
+- Architecture en couche de rendu : le vault et la coréférence raisonnent
+  toujours en `[PERSONNE_NNN]` (compteurs, alias et forme canonique
+  intacts) ; le surrogate est mémorisé dans le vault comme correspondance
+  de rendu et reste stable sur tout le dossier, redémarrages compris.
+- Contrôle d'intégrité : la réponse repasse d'abord par les placeholders
+  (correspondance exacte, les surrogates les plus longs d'abord). Un
+  surrogate omis est signalé « manquant » comme un placeholder omis ; un
+  placeholder `[TYPE_NNN]` inconnu bloque toujours.
+- La consigne de préservation des jetons n'est injectée que si le payload
+  contient réellement des jetons.
+
+**Limites documentées.** Un surrogate altéré par le LLM (civilité seule,
+casse, faute) n'est ni restauré ni détecté : la mention reste factice dans
+la réponse ré-identifiée. Le genre d'un surrogate est tiré des civilités
+vues dans le dossier (« M. », « Mme ») ; sans civilité, tirage libre. Un
+surrogate n'entre jamais en collision avec un nom déjà connu du dossier
+(réel ou factice), mais une pièce ultérieure du dossier peut, en théorie,
+contenir naturellement le nom tiré : risque résiduel assumé. Portée v1 :
+PERSONNE uniquement, les autres types gardent leurs placeholders typés.

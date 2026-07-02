@@ -80,6 +80,14 @@ class Vault(Protocol):
 
     def politique_dossier(self, dossier_id: str) -> dict | None: ...
 
+    def associer_surrogate(
+        self, dossier_id: str, placeholder: str, surrogate: str
+    ) -> None: ...
+
+    def surrogate_pour(self, dossier_id: str, placeholder: str) -> str | None: ...
+
+    def surrogates_dossier(self, dossier_id: str) -> dict[str, str]: ...
+
 
 class VaultMemoire:
     """Vault en mémoire : correspondances et compteurs par dossier et par type."""
@@ -97,6 +105,9 @@ class VaultMemoire:
         # dossier -> politique de remplacement (Lot 14) : elle vit avec les
         # données pour la même raison que le mode.
         self._politiques: dict[str, dict] = {}
+        # dossier -> placeholder -> surrogate (REQ-012) : une correspondance
+        # comme les autres, elle ne quitte jamais le vault en clair.
+        self._surrogates: dict[str, dict[str, str]] = defaultdict(dict)
 
     def placeholder_pour(self, dossier_id: str, type_: str, valeur: str) -> str:
         cle = (type_, valeur)
@@ -150,6 +161,15 @@ class VaultMemoire:
     def politique_dossier(self, dossier_id: str) -> dict | None:
         return self._politiques.get(dossier_id)
 
+    def associer_surrogate(self, dossier_id: str, placeholder: str, surrogate: str) -> None:
+        self._surrogates[dossier_id][placeholder] = surrogate
+
+    def surrogate_pour(self, dossier_id: str, placeholder: str) -> str | None:
+        return self._surrogates[dossier_id].get(placeholder)
+
+    def surrogates_dossier(self, dossier_id: str) -> dict[str, str]:
+        return dict(self._surrogates[dossier_id])
+
 
 def generer_cle() -> bytes:
     """Génère une clé de chiffrement Fernet (à conserver hors du dépôt)."""
@@ -196,11 +216,17 @@ class VaultChiffre(VaultMemoire):
         super().definir_politique(dossier_id, politique)
         self._persister()
 
+    def associer_surrogate(self, dossier_id: str, placeholder: str, surrogate: str) -> None:
+        super().associer_surrogate(dossier_id, placeholder, surrogate)
+        self._persister()
+
     def purger(self, dossier_id: str) -> None:
         """Efface définitivement les correspondances d'un dossier (cadrage §9.6)."""
         self._par_valeur.pop(dossier_id, None)
         self._par_placeholder.pop(dossier_id, None)
         self._compteurs.pop(dossier_id, None)
+        # Les surrogates sont des correspondances : purgés avec le reste.
+        self._surrogates.pop(dossier_id, None)
         self._persister()
 
     def _persister(self) -> None:
@@ -226,6 +252,9 @@ class VaultChiffre(VaultMemoire):
             },
             "modes": dict(self._modes),
             "politiques": dict(self._politiques),
+            "surrogates": {
+                dossier: dict(corr) for dossier, corr in self._surrogates.items()
+            },
         }
         octets = self._fernet.encrypt(json.dumps(contenu).encode("utf-8"))
         self._chemin.write_bytes(octets)
@@ -245,5 +274,8 @@ class VaultChiffre(VaultMemoire):
             for nom, numero in compteurs.items():
                 self._compteurs[dossier][nom] = numero
         self._modes.update(contenu.get("modes", {}))
-        # Lecture tolérante : les vaults antérieurs au Lot 14 n'ont pas de politique.
+        # Lecture tolérante : les vaults antérieurs au Lot 14 n'ont ni
+        # politique ni surrogates.
         self._politiques.update(contenu.get("politiques", {}))
+        for dossier, correspondances in contenu.get("surrogates", {}).items():
+            self._surrogates[dossier].update(correspondances)

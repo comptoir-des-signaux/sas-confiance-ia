@@ -75,16 +75,27 @@ class Politique:
     """Actions par type d'entité ; tout type absent est pseudonymisé."""
 
     actions: Mapping[str, str] = field(default_factory=dict)
+    # Rendu surrogate (REQ-012) : noms factices Faker fr_FR à la place des
+    # placeholders PERSONNE. Option par dossier exclusivement, jamais un
+    # défaut d'instance : le mode placeholder reste le défaut protecteur
+    # (intégrité pleine, arbitrage Q5).
+    surrogates: bool = False
 
     def action_pour(self, type_: str) -> str:
         return self.actions.get(type_) or DEFAUTS.get(type_, ACTION_PSEUDONYMISER)
 
     def surcharger(self, surcharge: "Politique") -> "Politique":
-        return Politique(actions={**self.actions, **surcharge.actions})
+        return Politique(
+            actions={**self.actions, **surcharge.actions},
+            surrogates=self.surrogates or surcharge.surrogates,
+        )
 
     def en_dict(self) -> dict:
-        return {"actions": dict(self.actions)}
+        return {"actions": dict(self.actions), "surrogates": self.surrogates}
 
     @classmethod
     def depuis_dict(cls, contenu: Mapping) -> "Politique":
-        return cls(actions=dict(contenu.get("actions", {})))
+        return cls(
+            actions=dict(contenu.get("actions", {})),
+            surrogates=bool(contenu.get("surrogates", False)),
+        )

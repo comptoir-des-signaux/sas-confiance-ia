@@ -10,7 +10,7 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from .coreference import TYPE_PERSONNE, ResolveurCoreference
+from .coreference import TYPE_PERSONNE, ResolveurCoreference, _genre_civilite
 from .detection import EntiteDetectee, Moteur, detecter
 from .politique import (
     ACTION_CONSERVER,
@@ -27,6 +27,9 @@ MOTIF_PLACEHOLDER = re.compile(r"\[[A-Z_]+_\d{3,}\]")
 class Remplacement:
     entite: EntiteDetectee
     placeholder: str
+    # Rendu surrogate (REQ-012) : le texte porte ce nom factice, le vault et
+    # le contrôle d'intégrité continuent de raisonner sur le placeholder.
+    surrogate: str | None = None
 
 
 @dataclass(frozen=True)
@@ -48,9 +51,13 @@ class Pseudonymiseur:
         moteurs: Sequence[Moteur] = (),
         coreference: bool = True,
         politique: Politique | None = None,
+        generateur_surrogates=None,
     ) -> None:
         self._vault = vault
         self._moteurs = list(moteurs)
+        # Créé paresseusement au premier dossier en mode surrogate : Faker
+        # n'est chargé que si l'option est utilisée.
+        self._generateur_surrogates = generateur_surrogates
         # Défauts d'instance (SAS_POLITIQUES) ; la politique du dossier,
         # stockée dans le vault, les surcharge type par type (Lot 14).
         self._politique_defaut = politique or Politique()
@@ -107,6 +114,10 @@ class Pseudonymiseur:
             pseudonymise = (
                 pseudonymise[: r.entite.debut] + r.placeholder + pseudonymise[r.entite.fin :]
             )
+        if politique.surrogates:
+            pseudonymise, remplacements = self._appliquer_surrogates(
+                dossier_id, pseudonymise, remplacements
+            )
         return ResultatPseudonymisation(
             texte=pseudonymise,
             remplacements=remplacements,
@@ -121,12 +132,78 @@ class Pseudonymiseur:
             en_revue=sorted(set(en_revue)),
         )
 
+    def _appliquer_surrogates(
+        self, dossier_id: str, texte: str, remplacements: list[Remplacement]
+    ) -> tuple[str, list[Remplacement]]:
+        """Rend les placeholders PERSONNE sous forme de noms factices (REQ-012).
+
+        Le placeholder reste la clé du vault et du contrôle d'intégrité ; le
+        surrogate n'est qu'un rendu, mémorisé dans le vault pour rester
+        stable sur tout le dossier (y compris entre redémarrages).
+        """
+        if self._generateur_surrogates is None:
+            from .surrogates import GenerateurSurrogates
+
+            self._generateur_surrogates = GenerateurSurrogates()
+        rendus = []
+        for r in remplacements:
+            if r.entite.type != TYPE_PERSONNE or not MOTIF_PLACEHOLDER.fullmatch(
+                r.placeholder
+            ):
+                rendus.append(r)
+                continue
+            surrogate = self._vault.surrogate_pour(dossier_id, r.placeholder)
+            if surrogate is None:
+                surrogate = self._generateur_surrogates.nom_personne(
+                    self._genre_connu(dossier_id, r.placeholder, r.entite.valeur),
+                    interdits=self._noms_interdits(dossier_id),
+                )
+                self._vault.associer_surrogate(dossier_id, r.placeholder, surrogate)
+            texte = texte.replace(r.placeholder, surrogate)
+            rendus.append(
+                Remplacement(entite=r.entite, placeholder=r.placeholder, surrogate=surrogate)
+            )
+        return texte, rendus
+
+    def _genre_connu(self, dossier_id: str, placeholder: str, mention: str) -> str | None:
+        """Genre porté par la mention courante ou une civilité déjà vue (C4)."""
+        genre = _genre_civilite(mention)
+        if genre is not None:
+            return genre
+        for forme, ph in self._vault.valeurs_pour_type(dossier_id, TYPE_PERSONNE).items():
+            if ph == placeholder:
+                genre = _genre_civilite(forme)
+                if genre is not None:
+                    return genre
+        return None
+
+    def _noms_interdits(self, dossier_id: str) -> set[str]:
+        """Un surrogate ne reprend jamais un nom du dossier, réel ou factice :
+        la ré-identification restituerait le mauvais nom à cet endroit."""
+        return set(self._vault.valeurs_pour_type(dossier_id, TYPE_PERSONNE)) | set(
+            self._vault.surrogates_dossier(dossier_id).values()
+        )
+
     def placeholders_connus(self, dossier_id: str) -> set[str]:
         return self._vault.placeholders_connus(dossier_id)
+
+    def restaurer_surrogates(self, texte: str, dossier_id: str) -> str:
+        """Ramène les surrogates du dossier à leur placeholder [PERSONNE_NNN].
+
+        Correspondance exacte uniquement, les plus longs d'abord : un
+        surrogate altéré par le LLM (« Mme Roussel » pour « Camille
+        Roussel ») n'est pas restauré, limite assumée de Q5.
+        """
+        surrogates = self._vault.surrogates_dossier(dossier_id)
+        for placeholder, surrogate in sorted(
+            surrogates.items(), key=lambda kv: -len(kv[1])
+        ):
+            texte = texte.replace(surrogate, placeholder)
+        return texte
 
     def reidentifier(self, texte: str, dossier_id: str) -> str:
         def substituer(m: re.Match[str]) -> str:
             valeur = self._vault.valeur_pour(dossier_id, m.group(0))
             return valeur if valeur is not None else m.group(0)
 
-        return MOTIF_PLACEHOLDER.sub(substituer, texte)
+        return MOTIF_PLACEHOLDER.sub(substituer, self.restaurer_surrogates(texte, dossier_id))
