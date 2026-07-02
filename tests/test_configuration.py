@@ -147,3 +147,63 @@ def test_application_cablee_depuis_l_environnement():
     assert client.get("/health").status_code == 200
     identifiants = [m["id"] for m in client.get("/v1/models").json()["data"]]
     assert identifiants == ["mistral-small", "llama3"]
+
+
+# --- Juge LLM local (Lot 13, REQ-014) ---------------------------------------
+
+
+def test_sans_variables_juge_le_juge_est_absent():
+    config = charger_configuration(ENV_MINIMAL)
+    assert config.juge_base_url is None
+    assert config.creer_juge() is None
+
+
+def test_le_juge_se_configure_par_l_environnement():
+    config = charger_configuration(
+        {
+            **ENV_MINIMAL,
+            "SAS_JUGE_BASE_URL": "http://localhost:11434/v1",
+            "SAS_JUGE_MODELE": "qwen3:4b",
+            "SAS_JUGE_SCORE_MIN": "0.7",
+        }
+    )
+    juge = config.creer_juge()
+    assert juge is not None
+    assert juge.modele == "qwen3:4b"
+    assert juge.score_min == 0.7
+
+
+def test_le_score_min_du_juge_a_un_defaut():
+    config = charger_configuration(
+        {
+            **ENV_MINIMAL,
+            "SAS_JUGE_BASE_URL": "http://localhost:11434/v1",
+            "SAS_JUGE_MODELE": "qwen3:4b",
+        }
+    )
+    juge = config.creer_juge()
+    assert 0 < juge.score_min <= 1
+
+
+def test_juge_base_url_sans_modele_refusee():
+    with pytest.raises(ConfigurationInvalide, match="SAS_JUGE_MODELE"):
+        charger_configuration(
+            {**ENV_MINIMAL, "SAS_JUGE_BASE_URL": "http://localhost:11434/v1"}
+        )
+
+
+def test_juge_modele_sans_base_url_refuse():
+    with pytest.raises(ConfigurationInvalide, match="SAS_JUGE_BASE_URL"):
+        charger_configuration({**ENV_MINIMAL, "SAS_JUGE_MODELE": "qwen3:4b"})
+
+
+def test_score_min_du_juge_invalide_refuse():
+    with pytest.raises(ConfigurationInvalide, match="SAS_JUGE_SCORE_MIN"):
+        charger_configuration(
+            {
+                **ENV_MINIMAL,
+                "SAS_JUGE_BASE_URL": "http://localhost:11434/v1",
+                "SAS_JUGE_MODELE": "qwen3:4b",
+                "SAS_JUGE_SCORE_MIN": "fort",
+            }
+        )

@@ -12,11 +12,16 @@ endpoint OpenAI-compatible) ne demande qu'un changement de configuration.
 | SAS_NER | transformers, spacy ou inactif | transformers |
 | SAS_VAULT_CHEMIN | fichier vault chiffré persistant | aucun (vault mémoire) |
 | SAS_VAULT_CLE | clé Fernet du vault (via secret, jamais committée) | aucune |
+| SAS_JUGE_BASE_URL | base URL OpenAI-compatible LOCALE du juge C3 | aucune (juge absent) |
+| SAS_JUGE_MODELE | modèle du juge (requis si base URL fournie) | aucun |
+| SAS_JUGE_SCORE_MIN | score minimal des candidats du juge | 0.5 |
 
 Défauts protecteurs : sans chemin ET clé, le vault reste en mémoire (rien
 n'est écrit sur disque) ; le NER est actif par défaut et **fail-closed** :
 modèle ou dépendances absents = démarrage refusé avec message actionnable.
 La couverture ne se dégrade que par choix explicite (SAS_NER=inactif).
+Le juge C3 est optionnel PAR CONCEPTION (REQ-014, contrairement au NER
+fail-closed) : absent = sas fonctionnel documenté moins couvrant, journalisé.
 Une variable vide vaut absente (docker compose transmet ${VAR:-}).
 """
 
@@ -28,6 +33,7 @@ from dataclasses import dataclass
 
 from .api import creer_application
 from .backends import DELAI_DEFAUT_SECONDES, BackendOpenAICompatible
+from .juge import SCORE_MIN_DEFAUT, JugeLLM
 from .pseudonymiseur import Pseudonymiseur
 from .vault import Vault, VaultChiffre, VaultMemoire
 
@@ -65,6 +71,23 @@ class Configuration:
     ner: str
     vault_chemin: str | None
     vault_cle: str | None
+    juge_base_url: str | None
+    juge_modele: str | None
+    juge_score_min: float
+
+    def creer_juge(self) -> JugeLLM | None:
+        """Juge C3 optionnel et dégradable (REQ-014) : absent = documenté."""
+        if self.juge_base_url is None:
+            _journal.info(
+                "juge LLM absent (SAS_JUGE_BASE_URL non définie) : couverture "
+                "C1+C2 seule, les identifiants indirects ne sont pas signalés "
+                "(REQ-014, choix documenté)."
+            )
+            return None
+        backend = BackendOpenAICompatible(
+            base_url=self.juge_base_url, timeout=self.backend_timeout
+        )
+        return JugeLLM(backend, modele=self.juge_modele, score_min=self.juge_score_min)
 
     def creer_vault(self) -> Vault:
         if self.vault_chemin is not None and self.vault_cle is not None:
@@ -129,6 +152,28 @@ def charger_configuration(env: Mapping[str, str] | None = None) -> Configuration
             "SAS_VAULT_CHEMIN sans SAS_VAULT_CLE : le vault persistant est "
             "toujours chiffré (REQ-004), fournir la clé via un secret"
         )
+    juge_base_url = (env.get("SAS_JUGE_BASE_URL") or "").strip() or None
+    juge_modele = (env.get("SAS_JUGE_MODELE") or "").strip() or None
+    if juge_base_url is not None and juge_modele is None:
+        raise ConfigurationInvalide(
+            "SAS_JUGE_BASE_URL sans SAS_JUGE_MODELE : préciser le modèle du juge"
+        )
+    if juge_modele is not None and juge_base_url is None:
+        raise ConfigurationInvalide(
+            "SAS_JUGE_MODELE sans SAS_JUGE_BASE_URL : préciser l'endpoint "
+            "OpenAI-compatible LOCAL du juge (ex. http://localhost:11434/v1)"
+        )
+    score_min_brut = (env.get("SAS_JUGE_SCORE_MIN") or "").strip()
+    try:
+        juge_score_min = float(score_min_brut) if score_min_brut else SCORE_MIN_DEFAUT
+    except ValueError as exc:
+        raise ConfigurationInvalide(
+            f"SAS_JUGE_SCORE_MIN={score_min_brut!r} invalide : nombre entre 0 et 1 attendu"
+        ) from exc
+    if not 0 <= juge_score_min <= 1:
+        raise ConfigurationInvalide(
+            f"SAS_JUGE_SCORE_MIN={juge_score_min} invalide : nombre entre 0 et 1 attendu"
+        )
     timeout_brut = (env.get("SAS_BACKEND_TIMEOUT_SECONDES") or "").strip()
     try:
         backend_timeout = float(timeout_brut) if timeout_brut else DELAI_DEFAUT_SECONDES
@@ -145,6 +190,9 @@ def charger_configuration(env: Mapping[str, str] | None = None) -> Configuration
         ner=ner,
         vault_chemin=vault_chemin,
         vault_cle=vault_cle,
+        juge_base_url=juge_base_url,
+        juge_modele=juge_modele,
+        juge_score_min=juge_score_min,
     )
 
 
@@ -158,5 +206,8 @@ def creer_application_depuis_environnement(env: Mapping[str, str] | None = None)
     )
     pseudonymiseur = Pseudonymiseur(config.creer_vault(), moteurs=config.creer_moteurs())
     return creer_application(
-        pseudonymiseur=pseudonymiseur, backend=backend, modeles=config.modeles
+        pseudonymiseur=pseudonymiseur,
+        backend=backend,
+        modeles=config.modeles,
+        juge=config.creer_juge(),
     )

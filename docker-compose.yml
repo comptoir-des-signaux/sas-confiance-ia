@@ -33,6 +33,12 @@ services:
       # l'arrêt du conteneur.
       SAS_VAULT_CHEMIN: ${SAS_VAULT_CHEMIN:-}
       SAS_VAULT_CLE: ${SAS_VAULT_CLE:-}
+      # Juge LLM local C3 (REQ-014), optionnel : pointer un endpoint LOCAL
+      # (le service ollama du profil, par exemple) et un modèle léger.
+      # Absent = sas fonctionnel, documenté moins couvrant.
+      SAS_JUGE_BASE_URL: ${SAS_JUGE_BASE_URL:-}
+      SAS_JUGE_MODELE: ${SAS_JUGE_MODELE:-}
+      SAS_JUGE_SCORE_MIN: ${SAS_JUGE_SCORE_MIN:-}
     volumes:
       - donnees:/donnees
 
