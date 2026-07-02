@@ -36,13 +36,28 @@ def etiquette(type_: str) -> str:
 
 
 class Vault(Protocol):
-    """Interface commune aux vaults (mémoire, chiffré persistant)."""
+    """Interface commune aux vaults (mémoire, chiffré persistant).
+
+    Depuis le Lot 11 (coréférence), un placeholder peut posséder plusieurs
+    formes de surface (alias) mais une seule valeur de restitution : la
+    forme canonique (arbitrage Q1 de docs/specs/QUESTIONS.md).
+    """
 
     def placeholder_pour(self, dossier_id: str, type_: str, valeur: str) -> str: ...
 
     def valeur_pour(self, dossier_id: str, placeholder: str) -> str | None: ...
 
     def placeholders_connus(self, dossier_id: str) -> set[str]: ...
+
+    def valeurs_pour_type(self, dossier_id: str, type_: str) -> dict[str, str]: ...
+
+    def associer_alias(
+        self, dossier_id: str, type_: str, alias: str, placeholder: str
+    ) -> None: ...
+
+    def remplacer_valeur_canonique(
+        self, dossier_id: str, type_: str, placeholder: str, valeur: str
+    ) -> None: ...
 
 
 class VaultMemoire:
@@ -74,6 +89,25 @@ class VaultMemoire:
     def placeholders_connus(self, dossier_id: str) -> set[str]:
         return set(self._par_placeholder[dossier_id])
 
+    def valeurs_pour_type(self, dossier_id: str, type_: str) -> dict[str, str]:
+        """Toutes les formes connues (canoniques et alias) d'un type donné."""
+        return {
+            valeur: placeholder
+            for (t, valeur), placeholder in self._par_valeur[dossier_id].items()
+            if t == type_
+        }
+
+    def associer_alias(self, dossier_id: str, type_: str, alias: str, placeholder: str) -> None:
+        """Rattache une forme de surface supplémentaire à un placeholder existant."""
+        self._par_valeur[dossier_id][(type_, alias)] = placeholder
+
+    def remplacer_valeur_canonique(
+        self, dossier_id: str, type_: str, placeholder: str, valeur: str
+    ) -> None:
+        """La restitution du placeholder devient cette forme (plus complète)."""
+        self._par_placeholder[dossier_id][placeholder] = valeur
+        self._par_valeur[dossier_id][(type_, valeur)] = placeholder
+
 
 def generer_cle() -> bytes:
     """Génère une clé de chiffrement Fernet (à conserver hors du dépôt)."""
@@ -102,6 +136,16 @@ class VaultChiffre(VaultMemoire):
             self._persister()
         return placeholder
 
+    def associer_alias(self, dossier_id: str, type_: str, alias: str, placeholder: str) -> None:
+        super().associer_alias(dossier_id, type_, alias, placeholder)
+        self._persister()
+
+    def remplacer_valeur_canonique(
+        self, dossier_id: str, type_: str, placeholder: str, valeur: str
+    ) -> None:
+        super().remplacer_valeur_canonique(dossier_id, type_, placeholder, valeur)
+        self._persister()
+
     def purger(self, dossier_id: str) -> None:
         """Efface définitivement les correspondances d'un dossier (cadrage §9.6)."""
         self._par_valeur.pop(dossier_id, None)
@@ -118,6 +162,15 @@ class VaultChiffre(VaultMemoire):
                 dossier: {ph: t for (t, _v), ph in corr.items()}
                 for dossier, corr in self._par_valeur.items()
             },
+            # Formes de surface qui ne sont pas la valeur canonique (Lot 11).
+            "alias": {
+                dossier: [
+                    [t, valeur, ph]
+                    for (t, valeur), ph in corr.items()
+                    if self._par_placeholder[dossier].get(ph) != valeur
+                ]
+                for dossier, corr in self._par_valeur.items()
+            },
             "compteurs": {
                 dossier: dict(compteurs) for dossier, compteurs in self._compteurs.items()
             },
@@ -132,6 +185,10 @@ class VaultChiffre(VaultMemoire):
             for placeholder, valeur in correspondances.items():
                 self._par_placeholder[dossier][placeholder] = valeur
                 self._par_valeur[dossier][(types[placeholder], valeur)] = placeholder
+        # Lecture tolérante : les vaults antérieurs au Lot 11 n'ont pas d'alias.
+        for dossier, triplets in contenu.get("alias", {}).items():
+            for type_, valeur, placeholder in triplets:
+                self._par_valeur[dossier][(type_, valeur)] = placeholder
         for dossier, compteurs in contenu["compteurs"].items():
             for nom, numero in compteurs.items():
                 self._compteurs[dossier][nom] = numero
