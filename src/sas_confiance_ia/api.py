@@ -7,6 +7,7 @@ Lot 7 ; le streaming est refusé (REQ-010).
 
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
@@ -123,18 +124,17 @@ def creer_application(
             ambiguites_coreference.update(resultat.ambiguites)
             messages_pseudonymises.append({"role": message.role, "content": resultat.texte})
 
-        # Passe juge (C3, REQ-014) AVANT l'envoi au backend applicatif : sur
-        # le texte déjà pseudonymisé, avant l'insertion de la consigne. En
-        # v1 les candidats partent en revue (bloc de réponse), jamais en
-        # remplacement : les segments signalés sont donc déjà partis vers le
-        # backend au moment où l'appelant les lit (limite documentée).
-        bloc_juge = executer_passe(
-            juge,
-            "\n\n".join(m["content"] for m in messages_pseudonymises),
-            journal=journal,
-            requete_id=requete_id,
-            dossier_id=dossier_id,
-        )
+        # Passe juge (C3, REQ-014) sur le SEUL dernier message pseudonymisé :
+        # le proxy est sans état, l'historique a été jugé aux tours
+        # précédents (coût constant par tour, pas linéaire). Les positions se
+        # lisent dans le message ORIGINAL correspondant, que l'appelant
+        # possède (Q3 : jamais de segment en clair dans la réponse). En v1
+        # les candidats partent en revue, jamais en remplacement : les
+        # segments signalés sont donc déjà partis vers le backend au moment
+        # où l'appelant les lit (limite documentée).
+        index_dernier = len(requete.messages) - 1
+        texte_juge = messages_pseudonymises[index_dernier]["content"]
+        reference_juge = requete.messages[index_dernier].content
 
         if placeholders_envoyes:
             messages_pseudonymises.insert(
@@ -146,23 +146,39 @@ def creer_application(
         if requete.max_tokens is not None:
             payload["max_tokens"] = requete.max_tokens
 
-        try:
-            reponse = backend.completer(payload)
-        except ErreurBackend as erreur:
-            # Le détail ne contient que le type d'erreur : jamais le message
-            # de l'usager ni la réponse du fournisseur (REQ-003).
-            journal.enregistrer(
+        # La passe juge court en parallèle de l'appel au backend applicatif
+        # (elles sont indépendantes) : la latence ajoutée est bornée par le
+        # timeout DÉDIÉ du juge, pas cumulée à celle du backend.
+        with ThreadPoolExecutor(max_workers=1) as executeur:
+            futur_juge = executeur.submit(
+                executer_passe,
+                juge,
+                texte_juge,
+                texte_reference=reference_juge,
+                journal=journal,
                 requete_id=requete_id,
                 dossier_id=dossier_id,
-                backend=type(backend).__name__,
-                modele=requete.model,
-                statut="erreur_backend",
-                erreur_type=erreur.erreur_type,
             )
-            raise HTTPException(
-                status_code=502,
-                detail=f"Backend indisponible ({erreur.erreur_type}).",
-            ) from erreur
+            try:
+                reponse = backend.completer(payload)
+            except ErreurBackend as erreur:
+                # Le détail ne contient que le type d'erreur : jamais le
+                # message de l'usager ni la réponse du fournisseur (REQ-003).
+                journal.enregistrer(
+                    requete_id=requete_id,
+                    dossier_id=dossier_id,
+                    backend=type(backend).__name__,
+                    modele=requete.model,
+                    statut="erreur_backend",
+                    erreur_type=erreur.erreur_type,
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Backend indisponible ({erreur.erreur_type}).",
+                ) from erreur
+            bloc_juge = futur_juge.result()
+        if juge is not None:
+            bloc_juge["message_index"] = index_dernier
 
         # Contrôle d'intégrité (REQ-006) : lecture tolérante des placeholders
         # altérés, blocage de la ré-identification en présence d'un inconnu.
@@ -187,7 +203,19 @@ def creer_application(
             entites_par_type=entites_par_type,
             taille_approx=sum(len(m["content"]) for m in messages_pseudonymises),
             integrite=rapport.action,
-            candidats_juge=len(bloc_juge["candidats"]) if juge is not None else None,
+            # Un échec du juge reste distinguable d'une passe sans candidat :
+            # jamais un candidats_juge=0 trompeur (REQ-014, couverture
+            # dégradée toujours explicite).
+            juge_statut=(
+                None
+                if juge is None
+                else ("erreur" if "erreur_type" in bloc_juge else "ok")
+            ),
+            candidats_juge=(
+                len(bloc_juge["candidats"])
+                if juge is not None and "erreur_type" not in bloc_juge
+                else None
+            ),
         )
 
         return {

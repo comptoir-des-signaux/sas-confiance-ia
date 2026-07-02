@@ -67,16 +67,42 @@ def creer_routeur_ui(
                 )
             vault.marquer_dossier(requete.dossier_id, "serieux")
 
+        requete_id = str(uuid.uuid4())
         resultat = pseudonymiseur.pseudonymiser(requete.texte, dossier_id=requete.dossier_id)
-        # Passe juge (C3, REQ-014) sur le texte déjà pseudonymisé : les
-        # segments signalés viennent du document de l'utilisateur (Q3),
-        # jamais du vault ; ils partent en revue, jamais en remplacement.
+        # Passe juge (C3, REQ-014) sur le texte déjà pseudonymisé, renvoyée
+        # en positions dans ce même texte (Q3 : le client extrait lui-même,
+        # aucun segment en clair en mode sérieux ; le mode démo, valeurs
+        # assumées visibles, reçoit segment et justification). Les candidats
+        # partent en revue, jamais en remplacement.
         bloc_juge = executer_passe(
             juge,
             resultat.texte,
+            texte_reference=resultat.texte,
             journal=journal,
-            requete_id=str(uuid.uuid4()),
+            requete_id=requete_id,
             dossier_id=requete.dossier_id,
+            avec_details=requete.mode == "demo",
+        )
+        # Journal en métadonnées seules (REQ-003), corrélé à l'éventuel
+        # échec du juge par le même requete_id.
+        journal.enregistrer(
+            requete_id=requete_id,
+            dossier_id=requete.dossier_id,
+            backend="ui",
+            modele="",
+            statut="pseudonymisation_ui",
+            entites_par_type=resultat.comptes_par_type,
+            taille_approx=len(requete.texte),
+            juge_statut=(
+                None
+                if juge is None
+                else ("erreur" if "erreur_type" in bloc_juge else "ok")
+            ),
+            candidats_juge=(
+                len(bloc_juge["candidats"])
+                if juge is not None and "erreur_type" not in bloc_juge
+                else None
+            ),
         )
         detections: list[dict[str, Any]] = []
         for remplacement in resultat.remplacements:
@@ -302,14 +328,26 @@ function afficherSynthese(donnees) {
       ${donnees.ambiguites_coreference.map(echapper).join(", ")}</p>`;
   }
   if (donnees.juge && donnees.juge.actif && donnees.juge.candidats.length) {
+    // Le serveur ne renvoie que des positions (Q3) : le segment s'extrait
+    // ici, depuis le texte pseudonymisé que la page possède déjà.
     const candidats = donnees.juge.candidats
-      .map((c) => `<tr><td>${echapper(c.segment)}</td><td>${echapper(c.type_candidat)}</td>
-        <td>${echapper(c.justification)}</td><td>${c.score.toFixed(2)}</td></tr>`)
+      .map((c) => {
+        const segment = c.segment !== undefined
+          ? c.segment : donnees.texte.slice(c.debut, c.fin);
+        const justification = c.justification !== undefined
+          ? echapper(c.justification) : "(mode démo pour la justification)";
+        return `<tr><td>${echapper(segment)}</td><td>${echapper(c.type_candidat)}</td>
+          <td>${justification}</td><td>${c.score.toFixed(2)}</td></tr>`;
+      })
       .join("");
     html += `<h3>Identifiants indirects à revoir (juge LLM local)</h3>
       <p>Signalés pour relecture humaine : le sas ne les a PAS remplacés.</p>
       <table><tr><th>Segment</th><th>Type</th><th>Justification</th><th>Score</th></tr>
       ${candidats}</table>`;
+  }
+  if (donnees.juge && donnees.juge.candidats_non_localises) {
+    html += `<p>${echapper(donnees.juge.candidats_non_localises)} signalement(s) du juge
+      non localisables dans le texte : écartés (parade F7).</p>`;
   }
   if (donnees.juge && donnees.juge.erreur_type) {
     html += `<p>Le juge LLM a échoué (${echapper(donnees.juge.erreur_type)}) :

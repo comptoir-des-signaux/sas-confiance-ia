@@ -203,8 +203,10 @@ TEXTE_AVEC_EMAIL = (
 )
 
 
-def test_le_proxy_expose_les_candidats_du_juge():
-    juge, backend_juge = creer_juge(json.dumps(CANDIDATS_VALIDES))
+def test_le_proxy_expose_les_candidats_en_positions_jamais_en_clair():
+    # Arbitrage Q3 : la réponse du serveur ne transporte ni segment ni
+    # justification ; le client extrait via début/fin dans SON message.
+    juge, _ = creer_juge(json.dumps(CANDIDATS_VALIDES))
     client, _ = creer_client(juge=juge)
     reponse = client.post(
         "/v1/chat/completions",
@@ -215,28 +217,39 @@ def test_le_proxy_expose_les_candidats_du_juge():
     )
     bloc = reponse.json()["sas_confiance_ia"]["juge"]
     assert bloc["actif"] is True
-    assert [c["segment"] for c in bloc["candidats"]] == [
-        "chef du service assainissement",
-        "Jojo",
-    ]
-    assert set(bloc["candidats"][0]) == {"segment", "type_candidat", "justification", "score"}
+    assert bloc["message_index"] == 0
+    # « chef du service assainissement » n'existe pas dans le message :
+    # candidat non localisable, écarté et compté, jamais transmis en clair.
+    assert bloc["candidats_non_localises"] == 1
+    (position,) = bloc["candidats"]
+    assert TEXTE_AVEC_EMAIL[position["debut"] : position["fin"]] == "Jojo"
+    assert set(position) == {"debut", "fin", "type_candidat", "score"}
+    assert "chef du service assainissement" not in reponse.text
+    assert "justification" not in reponse.text
 
 
-def test_le_juge_recoit_le_texte_deja_pseudonymise():
+def test_le_juge_recoit_le_dernier_message_deja_pseudonymise():
     # 02-AI-SPEC §2 : le juge ne voit les valeurs brutes que pour les
-    # segments encore non couverts ; ce que C1 a détecté est déjà protégé.
+    # segments encore non couverts. Proxy sans état : seul le dernier
+    # message (le tour courant) est jugé, l'historique l'a été aux tours
+    # précédents.
     juge, backend_juge = creer_juge("[]")
     client, _ = creer_client(juge=juge)
     client.post(
         "/v1/chat/completions",
         json={
             "model": "modele-de-test",
-            "messages": [{"role": "user", "content": TEXTE_AVEC_EMAIL}],
+            "messages": [
+                {"role": "user", "content": "Premier tour avec paul.durand@exemple.fr."},
+                {"role": "assistant", "content": "Réponse du premier tour."},
+                {"role": "user", "content": TEXTE_AVEC_EMAIL},
+            ],
         },
     )
     (payload_juge,) = backend_juge.payloads_bruts
     assert "marie.martin@exemple.fr" not in payload_juge
-    assert "[EMAIL_001]" in payload_juge
+    assert "[EMAIL_" in payload_juge
+    assert "Premier tour" not in payload_juge
 
 
 def test_sans_juge_le_sas_reste_fonctionnel():
@@ -251,7 +264,11 @@ def test_sans_juge_le_sas_reste_fonctionnel():
         },
     )
     assert reponse.status_code == 200
-    assert reponse.json()["sas_confiance_ia"]["juge"] == {"actif": False, "candidats": []}
+    assert reponse.json()["sas_confiance_ia"]["juge"] == {
+        "actif": False,
+        "candidats": [],
+        "candidats_non_localises": 0,
+    }
 
 
 def test_une_erreur_du_juge_n_empeche_pas_le_flux(caplog):
@@ -269,9 +286,16 @@ def test_une_erreur_du_juge_n_empeche_pas_le_flux(caplog):
         )
     assert reponse.status_code == 200
     bloc = reponse.json()["sas_confiance_ia"]["juge"]
-    assert bloc == {"actif": True, "candidats": [], "erreur_type": "SortieJugeInvalide"}
-    enregistrements = [r for r in caplog.records if r.name == "sas_confiance_ia.journal"]
-    assert any("erreur_juge" in r.getMessage() for r in enregistrements)
+    assert bloc["erreur_type"] == "SortieJugeInvalide"
+    assert bloc["candidats"] == []
+    texte_journal = "\n".join(
+        r.getMessage() for r in caplog.records if r.name == "sas_confiance_ia.journal"
+    )
+    assert '"statut": "erreur_juge"' in texte_journal
+    # L'échec du juge est distinguable d'une passe réussie sans candidat :
+    # jamais un candidats_juge=0 trompeur sur l'événement principal.
+    assert '"juge_statut": "erreur"' in texte_journal
+    assert '"candidats_juge"' not in texte_journal
 
 
 def test_le_journal_ne_contient_jamais_les_segments_du_juge(caplog):
@@ -293,10 +317,11 @@ def test_le_journal_ne_contient_jamais_les_segments_du_juge(caplog):
     assert "chef du service assainissement" not in texte_journal
     assert "Jojo" not in texte_journal
     # Le compte, lui, est une métadonnée de gouvernance légitime (REQ-003).
-    assert '"candidats_juge": 2' in texte_journal
+    assert '"juge_statut": "ok"' in texte_journal
+    assert '"candidats_juge": 1' in texte_journal
 
 
-def test_l_ui_expose_les_candidats_du_juge():
+def test_l_ui_expose_les_candidats_en_positions_en_mode_serieux():
     juge, backend_juge = creer_juge(json.dumps(CANDIDATS_VALIDES))
     client, _ = creer_client(juge=juge)
     reponse = client.post(
@@ -305,12 +330,45 @@ def test_l_ui_expose_les_candidats_du_juge():
     )
     corps = reponse.json()
     assert corps["juge"]["actif"] is True
-    assert [c["segment"] for c in corps["juge"]["candidats"]] == [
-        "chef du service assainissement",
-        "Jojo",
-    ]
+    assert corps["juge"]["candidats_non_localises"] == 1
+    (position,) = corps["juge"]["candidats"]
+    # Les positions se lisent dans le texte pseudonymisé renvoyé : le
+    # client extrait le segment lui-même (Q3), rien ne part en clair.
+    assert corps["texte"][position["debut"] : position["fin"]] == "Jojo"
+    assert set(position) == {"debut", "fin", "type_candidat", "score"}
     (payload_juge,) = backend_juge.payloads_bruts
     assert "marie.martin@exemple.fr" not in payload_juge
+
+
+def test_l_ui_montre_segment_et_justification_en_mode_demo():
+    juge, _ = creer_juge(json.dumps(CANDIDATS_VALIDES))
+    client, _ = creer_client(juge=juge)
+    reponse = client.post(
+        "/ui/pseudonymiser",
+        json={"texte": TEXTE_AVEC_EMAIL, "dossier_id": "d-demo", "mode": "demo"},
+    )
+    (position,) = reponse.json()["juge"]["candidats"]
+    assert position["segment"] == "Jojo"
+    assert position["justification"].startswith("Surnom")
+
+
+def test_l_ui_journalise_sa_pseudonymisation_et_la_passe_juge(caplog):
+    import logging
+
+    juge, _ = creer_juge(json.dumps(CANDIDATS_VALIDES))
+    client, _ = creer_client(juge=juge)
+    with caplog.at_level(logging.INFO):
+        client.post(
+            "/ui/pseudonymiser",
+            json={"texte": TEXTE_AVEC_EMAIL, "dossier_id": "d-juge", "mode": "serieux"},
+        )
+    texte_journal = "\n".join(
+        r.getMessage() for r in caplog.records if r.name == "sas_confiance_ia.journal"
+    )
+    assert '"statut": "pseudonymisation_ui"' in texte_journal
+    assert '"juge_statut": "ok"' in texte_journal
+    assert '"candidats_juge": 1' in texte_journal
+    assert "Jojo" not in texte_journal
 
 
 def test_la_page_affiche_la_section_juge():
@@ -318,3 +376,30 @@ def test_la_page_affiche_la_section_juge():
 
     assert "candidats" in PAGE_HTML
     assert "Identifiants indirects" in PAGE_HTML
+    # Le segment s'extrait côté client depuis le texte pseudonymisé (Q3).
+    assert "slice(" in PAGE_HTML
+
+
+def test_la_barriere_markdown_est_insensible_a_la_casse():
+    sortie = "```JSON\n" + json.dumps(CANDIDATS_VALIDES) + "\n```"
+    juge, _ = creer_juge(sortie)
+    assert len(juge.signaler(TEXTE)) == 2
+
+
+def test_localiser_transforme_les_segments_en_positions():
+    from sas_confiance_ia.juge import localiser
+
+    candidats = [
+        CandidatJuge(segment="Jojo", type_candidat="SURNOM", justification="x", score=0.8),
+        CandidatJuge(
+            segment="absent du texte", type_candidat="AUTRE", justification="y", score=0.9
+        ),
+    ]
+    localises, non_localises = localiser(candidats, TEXTE)
+    assert non_localises == 1
+    (position,) = localises
+    debut, fin = position["debut"], position["fin"]
+    assert TEXTE[debut:fin] == "Jojo"
+    # Jamais le segment ni la justification en clair : le client extrait
+    # lui-même depuis le texte qu'il possède (arbitrage Q3).
+    assert set(position) == {"debut", "fin", "type_candidat", "score"}

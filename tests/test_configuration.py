@@ -207,3 +207,64 @@ def test_score_min_du_juge_invalide_refuse():
                 "SAS_JUGE_SCORE_MIN": "fort",
             }
         )
+
+
+def test_le_juge_refuse_un_endpoint_public():
+    # Ligne rouge REQ-001 : « le juge n'appelle jamais un service distant »
+    # est garanti au démarrage, pas seulement par les tests.
+    config = charger_configuration(
+        {
+            **ENV_MINIMAL,
+            "SAS_JUGE_BASE_URL": "https://api.exemple-cloud.com/v1",
+            "SAS_JUGE_MODELE": "mistral-small",
+        }
+    )
+    with pytest.raises(ConfigurationInvalide, match="locale"):
+        config.creer_juge()
+
+
+def test_le_juge_refuse_une_ip_publique():
+    config = charger_configuration(
+        {
+            **ENV_MINIMAL,
+            "SAS_JUGE_BASE_URL": "http://93.184.216.34:11434/v1",
+            "SAS_JUGE_MODELE": "mistral-small",
+        }
+    )
+    with pytest.raises(ConfigurationInvalide, match="locale"):
+        config.creer_juge()
+
+
+def test_le_juge_accepte_les_adresses_privees_et_la_boucle_locale():
+    for hote in ("127.0.0.1", "localhost", "10.0.0.5", "192.168.1.20", "172.20.0.3"):
+        config = charger_configuration(
+            {
+                **ENV_MINIMAL,
+                "SAS_JUGE_BASE_URL": f"http://{hote}:11434/v1",
+                "SAS_JUGE_MODELE": "mistral-small",
+            }
+        )
+        assert config.creer_juge() is not None
+
+
+def test_le_juge_a_son_propre_timeout():
+    # Un juge suspendu ne doit pas bloquer le proxy pendant le timeout du
+    # backend applicatif (120 s par défaut) : timeout dédié, plus court.
+    config = charger_configuration(
+        {
+            **ENV_MINIMAL,
+            "SAS_JUGE_BASE_URL": "http://127.0.0.1:11434/v1",
+            "SAS_JUGE_MODELE": "mistral-small",
+        }
+    )
+    assert config.juge_timeout == 60.0
+    config = charger_configuration(
+        {
+            **ENV_MINIMAL,
+            "SAS_JUGE_BASE_URL": "http://127.0.0.1:11434/v1",
+            "SAS_JUGE_MODELE": "mistral-small",
+            "SAS_JUGE_TIMEOUT_SECONDES": "15",
+        }
+    )
+    assert config.juge_timeout == 15.0
+    assert config.creer_juge().backend.timeout == 15.0

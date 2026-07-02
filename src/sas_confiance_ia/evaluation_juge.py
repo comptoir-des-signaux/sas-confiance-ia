@@ -25,12 +25,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .juge import CandidatJuge, JugeLLM
+from .juge import SCORE_MIN_DEFAUT, CandidatJuge, JugeLLM
 
 CORPUS_CANARIS = Path("corpus/synthetique/06-canaris.md")
 VERITE_CANARIS = Path("corpus/synthetique/verite-terrain-canaris.json")
 
 _MOTS_COURTS = 3  # les mots de 3 lettres ou moins ne discriminent rien
+# Mots-outils français de plus de 3 lettres : sans ce filtre, « dans le
+# même bureau » apparie « dans le même temps » et la mesure F9 se gonfle.
+_MOTS_VIDES = {
+    "dans", "plus", "même", "meme", "pour", "avec", "sans", "sous", "chez",
+    "tout", "tous", "toute", "toutes", "cette", "cettes", "leur", "leurs",
+    "elle", "elles", "vous", "nous", "être", "etre", "avoir", "fait",
+    "entre", "vers", "depuis", "dont", "aussi", "comme", "mais", "donc",
+    "alors", "ainsi", "après", "apres", "avant", "encore", "était", "etait",
+}
 
 
 @dataclass(frozen=True)
@@ -39,6 +48,7 @@ class ResultatCanaris:
     manques: list[str]
     taux: float
     candidats_total: int
+    candidats: tuple[CandidatJuge, ...] = ()
 
 
 def _normaliser(texte: str) -> str:
@@ -46,23 +56,47 @@ def _normaliser(texte: str) -> str:
 
 
 def _mots_significatifs(texte: str) -> set[str]:
-    return {mot for mot in re.findall(r"\w+", _normaliser(texte)) if len(mot) > _MOTS_COURTS}
+    return {
+        mot
+        for mot in re.findall(r"\w+", _normaliser(texte))
+        if len(mot) > _MOTS_COURTS and mot not in _MOTS_VIDES
+    }
+
+
+def _candidat_correspondant(
+    canari: dict[str, Any],
+    candidats: list[CandidatJuge],
+    exclus: set[int],
+) -> int | None:
+    """Indice du premier candidat libre qui recouvre un extrait du canari.
+
+    Deux passes : l'inclusion textuelle (forte) d'abord, la majorité de
+    mots significatifs (souple) ensuite, pour qu'un appariement faible ne
+    consomme pas un candidat qu'un autre canari apparie fortement.
+    """
+    extraits = [(_normaliser(e), _mots_significatifs(e)) for e in canari["extraits"]]
+    for extrait_norme, _ in extraits:
+        for i, candidat in enumerate(candidats):
+            if i in exclus:
+                continue
+            segment_norme = _normaliser(candidat.segment)
+            if extrait_norme in segment_norme or segment_norme in extrait_norme:
+                return i
+    for _, mots_extrait in extraits:
+        if not mots_extrait:
+            continue
+        for i, candidat in enumerate(candidats):
+            if i in exclus:
+                continue
+            communs = mots_extrait & _mots_significatifs(candidat.segment)
+            if len(communs) * 2 >= len(mots_extrait):
+                return i
+    return None
 
 
 def canari_signale(canari: dict[str, Any], candidats: list[CandidatJuge]) -> bool:
     """Vrai si un candidat du juge recouvre l'un des extraits du canari."""
-    for extrait in canari["extraits"]:
-        extrait_norme = _normaliser(extrait)
-        mots_extrait = _mots_significatifs(extrait)
-        for candidat in candidats:
-            segment_norme = _normaliser(candidat.segment)
-            if extrait_norme in segment_norme or segment_norme in extrait_norme:
-                return True
-            if mots_extrait:
-                communs = mots_extrait & _mots_significatifs(candidat.segment)
-                if len(communs) * 2 >= len(mots_extrait):
-                    return True
-    return False
+    return _candidat_correspondant(canari, candidats, set()) is not None
 
 
 def charger_canaris(chemin: Path) -> list[dict[str, Any]]:
@@ -80,13 +114,22 @@ def evaluer_juge(
     canaris: list[dict[str, Any]],
 ) -> ResultatCanaris:
     candidats = juge.signaler(texte_pseudonymise)
-    signales = [c["id"] for c in canaris if canari_signale(c, candidats)]
+    # Affectation 1:1 : un candidat ne valide qu'un seul canari, sinon un
+    # signalement vague gonflerait la mesure par appariement croisé.
+    exclus: set[int] = set()
+    signales = []
+    for canari in canaris:
+        indice = _candidat_correspondant(canari, candidats, exclus)
+        if indice is not None:
+            exclus.add(indice)
+            signales.append(canari["id"])
     manques = [c["id"] for c in canaris if c["id"] not in signales]
     return ResultatCanaris(
         signales=signales,
         manques=manques,
         taux=len(signales) / len(canaris) if canaris else 0.0,
         candidats_total=len(candidats),
+        candidats=tuple(candidats),
     )
 
 
@@ -112,7 +155,7 @@ def _principal() -> None:
     parseur = argparse.ArgumentParser(description=__doc__)
     parseur.add_argument("--base-url", required=True, help="endpoint OpenAI-compatible LOCAL")
     parseur.add_argument("--modele", required=True)
-    parseur.add_argument("--score-min", type=float, default=None)
+    parseur.add_argument("--score-min", type=float, default=SCORE_MIN_DEFAUT)
     parseur.add_argument(
         "--moteur",
         default="transformers",
@@ -122,6 +165,12 @@ def _principal() -> None:
     parseur.add_argument("--corpus", default=CORPUS_CANARIS, type=Path)
     parseur.add_argument("--verite", default=VERITE_CANARIS, type=Path)
     arguments = parseur.parse_args()
+    for chemin in (arguments.corpus, arguments.verite):
+        if not chemin.exists():
+            parseur.error(
+                f"{chemin} introuvable : lancer depuis la racine du dépôt, "
+                "ou passer --corpus et --verite explicitement"
+            )
 
     moteurs = []
     if arguments.moteur != "aucun":
@@ -133,15 +182,22 @@ def _principal() -> None:
         arguments.corpus.read_text(encoding="utf-8"), dossier_id="eval-canaris"
     ).texte
 
-    options = {} if arguments.score_min is None else {"score_min": arguments.score_min}
     juge = JugeLLM(
         BackendOpenAICompatible(base_url=arguments.base_url, timeout=600),
         modele=arguments.modele,
-        **options,
+        score_min=arguments.score_min,
     )
     resultat = evaluer_juge(juge, texte, charger_canaris(arguments.verite))
     print(f"Juge : {arguments.modele} sur {arguments.base_url} (C2 : {arguments.moteur})")
     print(tableau_markdown(resultat))
+    # Candidats en clair pour la vérification humaine de l'appariement :
+    # sortie console locale, corpus canaris 100 % fictif.
+    print("\nCandidats émis (à vérifier à la main, F9) :")
+    for candidat in resultat.candidats:
+        print(
+            f"- [{candidat.type_candidat}] « {candidat.segment} » "
+            f"(score {candidat.score:.2f}) : {candidat.justification}"
+        )
 
 
 if __name__ == "__main__":

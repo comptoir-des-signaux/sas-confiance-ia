@@ -26,6 +26,7 @@ class Journal:
         taille_approx: int | None = None,
         integrite: str | None = None,
         erreur_type: str | None = None,
+        juge_statut: str | None = None,
         candidats_juge: int | None = None,
     ) -> None:
         evenement: dict[str, object] = {
@@ -44,6 +45,8 @@ class Journal:
             evenement["integrite"] = integrite
         if erreur_type is not None:
             evenement["erreur_type"] = erreur_type
+        if juge_statut is not None:
+            evenement["juge_statut"] = juge_statut
         if candidats_juge is not None:
             # Compte seul (REQ-003) : jamais les segments signalés par le juge.
             evenement["candidats_juge"] = candidats_juge

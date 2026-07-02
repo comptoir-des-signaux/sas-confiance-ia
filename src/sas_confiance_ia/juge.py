@@ -18,7 +18,7 @@ score minimal configurable, placeholders déjà couverts filtrés.
 
 import json
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any
 
 from .backends import Backend, ErreurBackend
@@ -45,7 +45,7 @@ _CLES_CANDIDAT = {"segment", "type_candidat", "justification", "score"}
 # Épuration déterministe (pas une interprétation) : clôture de raisonnement
 # des modèles pensants (qwen3) et barrière markdown autour du JSON.
 _MOTIF_RAISONNEMENT = re.compile(r"\A\s*<think>.*?</think>", re.DOTALL)
-_MOTIF_BARRIERE = re.compile(r"\A\s*```[a-z]*\s*(.*?)\s*```\s*\Z", re.DOTALL)
+_MOTIF_BARRIERE = re.compile(r"\A\s*```[a-zA-Z]*\s*(.*?)\s*```\s*\Z", re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -118,25 +118,66 @@ class JugeLLM:
         return candidats
 
 
+def localiser(
+    candidats: list[CandidatJuge], texte: str, avec_details: bool = False
+) -> tuple[list[dict[str, Any]], int]:
+    """Positions des candidats dans un texte que le client possède déjà.
+
+    Arbitrage Q3 : la réponse du serveur ne transporte jamais de valeur en
+    mode sérieux. Le segment (extrait brut) et la justification (prose du
+    modèle, qui peut citer des valeurs) ne sortent donc pas d'ici : le
+    client extrait le segment lui-même via début/fin. Un candidat
+    introuvable dans le texte (paraphrase, hallucination F7) est écarté et
+    compté, jamais transmis en clair. `avec_details` (mode démonstration
+    uniquement, valeurs assumées visibles) rajoute segment et justification.
+    """
+    localises: list[dict[str, Any]] = []
+    non_localises = 0
+    for candidat in candidats:
+        debut = texte.find(candidat.segment)
+        if debut < 0:
+            non_localises += 1
+            continue
+        entree: dict[str, Any] = {
+            "debut": debut,
+            "fin": debut + len(candidat.segment),
+            "type_candidat": candidat.type_candidat,
+            "score": candidat.score,
+        }
+        if avec_details:
+            entree["segment"] = candidat.segment
+            entree["justification"] = candidat.justification
+        localises.append(entree)
+    return localises, non_localises
+
+
 def executer_passe(
     juge: "JugeLLM | None",
     texte: str,
     *,
+    texte_reference: str,
     journal: Journal,
     requete_id: str,
     dossier_id: str,
+    avec_details: bool = False,
 ) -> dict[str, Any]:
     """Passe juge tolérante aux pannes, partagée par le proxy et l'UI.
 
     Le juge est optionnel et dégradable (REQ-014) : son échec est journalisé
     (type d'erreur seul) et n'interrompt jamais le flux ; la couverture est
-    alors celle de C1+C2, ce que le bloc renvoyé documente.
+    alors celle de C1+C2, ce que le bloc renvoyé documente. Les candidats
+    sont renvoyés en positions dans `texte_reference` (un texte que le
+    client possède), jamais en clair (Q3).
     """
-    bloc: dict[str, Any] = {"actif": juge is not None, "candidats": []}
+    bloc: dict[str, Any] = {
+        "actif": juge is not None,
+        "candidats": [],
+        "candidats_non_localises": 0,
+    }
     if juge is None:
         return bloc
     try:
-        bloc["candidats"] = [asdict(candidat) for candidat in juge.signaler(texte)]
+        candidats = juge.signaler(texte)
     except ErreurJuge as erreur:
         bloc["erreur_type"] = erreur.erreur_type
         journal.enregistrer(
@@ -147,6 +188,10 @@ def executer_passe(
             statut="erreur_juge",
             erreur_type=erreur.erreur_type,
         )
+        return bloc
+    bloc["candidats"], bloc["candidats_non_localises"] = localiser(
+        candidats, texte_reference, avec_details=avec_details
+    )
     return bloc
 
 

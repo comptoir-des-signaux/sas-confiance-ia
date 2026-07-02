@@ -15,6 +15,7 @@ endpoint OpenAI-compatible) ne demande qu'un changement de configuration.
 | SAS_JUGE_BASE_URL | base URL OpenAI-compatible LOCALE du juge C3 | aucune (juge absent) |
 | SAS_JUGE_MODELE | modèle du juge (requis si base URL fournie) | aucun |
 | SAS_JUGE_SCORE_MIN | score minimal des candidats du juge | 0.5 |
+| SAS_JUGE_TIMEOUT_SECONDES | timeout dédié de la passe juge | 60 |
 
 Défauts protecteurs : sans chemin ET clé, le vault reste en mémoire (rien
 n'est écrit sur disque) ; le NER est actif par défaut et **fail-closed** :
@@ -26,10 +27,13 @@ Une variable vide vaut absente (docker compose transmet ${VAR:-}).
 """
 
 import importlib.util
+import ipaddress
 import logging
 import os
+import socket
 from collections.abc import Mapping
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from .api import creer_application
 from .backends import DELAI_DEFAUT_SECONDES, BackendOpenAICompatible
@@ -74,9 +78,15 @@ class Configuration:
     juge_base_url: str | None
     juge_modele: str | None
     juge_score_min: float
+    juge_timeout: float
 
     def creer_juge(self) -> JugeLLM | None:
-        """Juge C3 optionnel et dégradable (REQ-014) : absent = documenté."""
+        """Juge C3 optionnel et dégradable (REQ-014) : absent = documenté.
+
+        Garantie « le juge n'appelle jamais un service distant » tenue au
+        démarrage, pas seulement dans la suite de tests : l'hôte du juge
+        doit se résoudre en adresses locales ou privées, sinon refus.
+        """
         if self.juge_base_url is None:
             _journal.info(
                 "juge LLM absent (SAS_JUGE_BASE_URL non définie) : couverture "
@@ -84,8 +94,9 @@ class Configuration:
                 "(REQ-014, choix documenté)."
             )
             return None
+        _verifier_hote_local(self.juge_base_url)
         backend = BackendOpenAICompatible(
-            base_url=self.juge_base_url, timeout=self.backend_timeout
+            base_url=self.juge_base_url, timeout=self.juge_timeout
         )
         return JugeLLM(backend, modele=self.juge_modele, score_min=self.juge_score_min)
 
@@ -127,6 +138,36 @@ class Configuration:
         from .ner import creer_moteur_ner
 
         return [creer_moteur_ner(moteur=self.ner)]
+
+
+def _verifier_hote_local(base_url: str) -> None:
+    """Refuse un juge dont l'hôte ne se résout pas en zone de confiance.
+
+    Le texte soumis au juge contient précisément les identifiants indirects
+    que C1+C2 ont manqués : il ne quitte JAMAIS la boucle locale ou le
+    réseau privé (REQ-001, REQ-014). Vérification au démarrage ; un hôte
+    non résoluble est refusé aussi (impossible de prouver qu'il est local).
+    """
+    hote = urlsplit(base_url).hostname
+    if not hote:
+        raise ConfigurationInvalide(f"SAS_JUGE_BASE_URL={base_url!r} : hôte illisible")
+    try:
+        adresses = {info[4][0] for info in socket.getaddrinfo(hote, None)}
+    except OSError as exc:
+        raise ConfigurationInvalide(
+            f"SAS_JUGE_BASE_URL : hôte {hote!r} non résoluble, impossible de "
+            "vérifier qu'il désigne une adresse locale (le juge n'appelle "
+            "jamais un service distant, REQ-014). Si le juge tourne dans le "
+            "réseau compose, démarrer aussi son service (profil ollama)."
+        ) from exc
+    for adresse in adresses:
+        ip = ipaddress.ip_address(adresse.split("%")[0])
+        if not (ip.is_loopback or ip.is_private or ip.is_link_local):
+            raise ConfigurationInvalide(
+                f"SAS_JUGE_BASE_URL : l'hôte {hote!r} se résout en {adresse}, "
+                "une adresse publique. Le juge tourne exclusivement sur une "
+                "adresse locale ou privée (REQ-014) : jamais de service distant."
+            )
 
 
 def charger_configuration(env: Mapping[str, str] | None = None) -> Configuration:
@@ -174,6 +215,16 @@ def charger_configuration(env: Mapping[str, str] | None = None) -> Configuration
         raise ConfigurationInvalide(
             f"SAS_JUGE_SCORE_MIN={juge_score_min} invalide : nombre entre 0 et 1 attendu"
         )
+    juge_timeout_brut = (env.get("SAS_JUGE_TIMEOUT_SECONDES") or "").strip()
+    try:
+        # Timeout DÉDIÉ, plus court que celui du backend applicatif : un
+        # juge suspendu ne bloque pas le proxy pendant deux minutes.
+        juge_timeout = float(juge_timeout_brut) if juge_timeout_brut else 60.0
+    except ValueError as exc:
+        raise ConfigurationInvalide(
+            f"SAS_JUGE_TIMEOUT_SECONDES={juge_timeout_brut!r} invalide : "
+            "nombre de secondes attendu"
+        ) from exc
     timeout_brut = (env.get("SAS_BACKEND_TIMEOUT_SECONDES") or "").strip()
     try:
         backend_timeout = float(timeout_brut) if timeout_brut else DELAI_DEFAUT_SECONDES
@@ -193,6 +244,7 @@ def charger_configuration(env: Mapping[str, str] | None = None) -> Configuration
         juge_base_url=juge_base_url,
         juge_modele=juge_modele,
         juge_score_min=juge_score_min,
+        juge_timeout=juge_timeout,
     )
 
 

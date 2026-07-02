@@ -113,8 +113,11 @@ Troisième couche de détection, optionnelle par conception : un LLM local
 (Ollama) relit le texte déjà pseudonymisé et signale pour revue humaine les
 identifiants indirects que regex et NER manquent (« le chef du service
 assainissement de la petite commune », surnoms, périphrases). Ses candidats
-ne sont jamais remplacés automatiquement, et il n'appelle jamais un service
-distant (un test réseau l'interdit activement).
+ne sont jamais remplacés automatiquement et reviennent sous forme de
+positions (jamais d'extrait en clair dans la réponse en mode sérieux). Le
+juge n'appelle jamais un service distant : l'hôte configuré doit se résoudre
+en adresse locale ou privée, sinon le sas refuse de démarrer, et un test
+réseau l'interdit aussi dans la suite.
 
 ```bash
 SAS_JUGE_BASE_URL=http://localhost:11434/v1 \

@@ -102,3 +102,31 @@ def test_evaluer_juge_mesure_la_fraction_signalee():
     tableau = tableau_markdown(resultat)
     assert "2/6" in tableau
     assert "fonction-rare-epci" in tableau
+
+
+def test_les_mots_outils_ne_comptent_pas_dans_l_appariement():
+    # « dans », « plus », « même » dépassent 3 lettres mais ne discriminent
+    # rien : sans ce filtre, la mesure F9 se gonfle par appariement croisé.
+    canari = {"id": "c", "description": "", "extraits": ["muté dans le même bureau"]}
+    assert not canari_signale(canari, [candidat("dans le même temps")])
+
+
+def test_un_candidat_ne_valide_qu_un_seul_canari():
+    canaris = [
+        {"id": "a", "description": "", "extraits": ["la petite commune membre"]},
+        {"id": "b", "description": "", "extraits": ["plus petite commune voisine"]},
+    ]
+    sortie = json.dumps(
+        [
+            {
+                "segment": "la petite commune",
+                "type_candidat": "LIEU_RARE",
+                "justification": "x",
+                "score": 0.9,
+            }
+        ]
+    )
+    juge = JugeLLM(BackendCapture(contenu_reponse=sortie), modele="juge-test")
+    resultat = evaluer_juge(juge, "texte factice", canaris)
+    # Un seul candidat émis : il ne peut pas couvrir deux canaris à la fois.
+    assert len(resultat.signales) == 1

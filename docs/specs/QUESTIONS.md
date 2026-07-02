@@ -76,3 +76,11 @@ mise en évidence des entités détectées. Or la règle du mode sérieux (Lot 1
 - Pour les fichiers (Lot 15), le texte extrait par le serveur revient au
   navigateur : c'est le document de l'utilisateur, pas une valeur du vault.
   Le journal reste en métadonnées seules (REQ-003).
+
+**Application au juge C3 (2026-07-02, revue Lot 13).** Les candidats du juge
+voyagent eux aussi en positions (début/fin dans un texte que le client
+possède : le texte pseudonymisé pour l'UI, le message original pour le
+proxy), jamais en extrait brut en mode sérieux. La justification (prose du
+modèle, susceptible de citer des valeurs) n'est exposée qu'en mode
+démonstration. Un candidat non localisable dans le texte (paraphrase,
+hallucination F7) est écarté et compté, jamais transmis en clair.

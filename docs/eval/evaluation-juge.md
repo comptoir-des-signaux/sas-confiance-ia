@@ -65,7 +65,9 @@ Options : `--score-min` (défaut 0,5), `--moteur transformers|spacy|aucun`
   sous-corpus s'enrichit à chaque limite découverte (règle transverse 4 du
   plan).
 - L'appariement souple peut compter comme signalé un candidat voisin de
-  l'extrait attendu ; les candidats émis restent listés par la CLI pour
-  vérification humaine.
+  l'extrait attendu. Garde-fous : les mots-outils ne comptent pas dans le
+  recouvrement, chaque candidat ne valide qu'un seul canari (affectation
+  1:1, inclusions textuelles d'abord), et la CLI liste les candidats émis
+  pour vérification humaine.
 - Les candidats du juge partent en revue : cette mesure ne dit rien du taux
   de faux positifs en usage réel (surveillé via F7, score minimal 0,5).
