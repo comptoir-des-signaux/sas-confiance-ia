@@ -66,12 +66,17 @@ coller un texte, pseudonymiser, ré-identifier ; le mode sérieux n'affiche
 jamais les valeurs détectées (types, positions et comptes seulement), le mode
 démonstration (bandeau distinct, données synthétiques) refuse de s'activer si
 des dossiers sérieux sont actifs dans l'instance. Phase 1 complète.
-**Phase 2 en cours (lot 13 livré)** : un juge LLM local optionnel (REQ-014)
-relit le texte déjà pseudonymisé et signale les identifiants indirects
-(fonction rare, petite commune, surnom, périphrase) pour revue humaine,
-jamais en remplacement automatique ; couverture
-[mesurée et publiée sur les canaris](docs/eval/evaluation-juge.md).
-Prochains lots : politiques par type, fichiers, publication.
+**Phase 2 en cours (lots 13, 13 bis et 14 livrés)** : un juge LLM local
+optionnel (REQ-014) relit le texte déjà pseudonymisé et signale les
+identifiants indirects (fonction rare, petite commune, surnom, périphrase)
+pour revue humaine, jamais en remplacement automatique ; couverture
+[mesurée et publiée sur les canaris](docs/eval/evaluation-juge.md). Chaque
+type d'entité suit désormais une politique configurable par dossier
+(pseudonymiser, masquer sans coffre, conserver, revue : cadrage §9.5), la
+date de naissance est distinguée des dates procédurales (REQ-008) et les
+personnes peuvent recevoir des surrogates réalistes cohérents en genre,
+réversibles par le vault (REQ-012, arbitrage Q5).
+Prochains lots : fichiers, publication.
 
 ## Démarrage (développement)
 

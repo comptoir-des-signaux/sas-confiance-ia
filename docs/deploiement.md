@@ -119,3 +119,20 @@ jamais en silence. Pour un sas volontairement sans NER (couverture réduite
 aux types déterministes) : `SAS_NER=inactif`, choix journalisé. Le repli
 `SAS_NER=spacy` exige l'extra `[ner-repli-spacy]`, non embarqué dans
 l'image de référence (le moteur transformers y est déjà).
+
+## 7. Politiques de remplacement à l'exécution (Lot 14)
+
+Défauts d'instance par `SAS_POLITIQUES` (format « TYPE=action », séparé par
+des virgules ; actions : `pseudonymiser`, `masquer`, `conserver`, `revue`) :
+
+```bash
+export SAS_POLITIQUES="FR_SIREN=conserver,REFERENCE_DOSSIER=revue"
+```
+
+Une action ou un type inconnu **refuse le démarrage** ; `conserver` est
+tracé en avertissement (les valeurs de ce type partent en clair vers le
+backend). Chaque dossier peut surcharger ces défauts depuis l'interface
+(dates procédurales, surrogates réalistes) : ce choix est stocké dans le
+vault et survit au redémarrage. Détail des actions et des surrogates
+(REQ-012, arbitrage Q5) : README, section « Politiques de remplacement par
+type ».
