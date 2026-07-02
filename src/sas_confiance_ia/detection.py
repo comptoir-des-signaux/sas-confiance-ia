@@ -21,14 +21,25 @@ from .validators import iban_valide, luhn_valide, nir_valide
 # (C1, clés validées ou contexte explicite) priment tous sur les types
 # probabilistes du NER (PERSONNE > ORGANISATION > LIEU) : une couche moins
 # fiable ne dégrade jamais ce qu'une couche plus fiable a établi (02-AI-SPEC §1).
+# Les types *_SUSPECT (arbitrage Q4 : motif structurel à clé invalide masqué
+# en contexte explicite) suivent immédiatement leur type validé ; le SIRET
+# suspect prime sur un préfixe SIREN à Luhn valide (sinon le NIC fuit), et
+# tous priment sur CARTE_BANCAIRE (un NIR fictif peut passer Luhn).
 PRIORITE = [
     "FR_NIR",
     "FR_SIRET",
+    "FR_NIR_SUSPECT",
+    "FR_SIRET_SUSPECT",
     "FR_SIREN",
+    "FR_SIREN_SUSPECT",
     "IBAN",
+    "IBAN_SUSPECT",
+    "RPPS",
+    "MATRICULE",
     "EMAIL",
     "TELEPHONE",
     "ADRESSE",
+    "CODE_POSTAL",
     "CARTE_BANCAIRE",
     "PLAQUE",
     "REFERENCE_DOSSIER",
@@ -61,6 +72,11 @@ class Reconnaisseur:
     score: float
     groupe: int = 0
     validation: Callable[[str], bool] | None = None
+    # Contexte requis AVANT le motif (fenêtre de caractères) : porte les
+    # reconnaisseurs fail-safe de Q4 (motif structurel masqué seulement si
+    # un mot explicite le précède : « NIR », « SIRET », « matricule »...).
+    contexte: re.Pattern[str] | None = None
+    fenetre_contexte: int = 40
 
     def reconnaitre(self, texte: str) -> list[EntiteDetectee]:
         entites = []
@@ -68,6 +84,11 @@ class Reconnaisseur:
             valeur = m.group(self.groupe)
             if self.validation is not None and not self.validation(valeur):
                 continue
+            if self.contexte is not None:
+                debut = m.start(self.groupe)
+                fenetre = texte[max(0, debut - self.fenetre_contexte) : debut]
+                if not self.contexte.search(fenetre):
+                    continue
             entites.append(
                 EntiteDetectee(
                     type=self.type,
@@ -84,28 +105,91 @@ def _sans_separateurs(valeur: str) -> str:
     return re.sub(r"[\s.-]", "", valeur)
 
 
+# Motifs structurels partagés entre le type validé et son suspect (Q4).
+_MOTIF_NIR = re.compile(r"\b[12]\s?\d{2}\s?\d{2}\s?(?:\d{2}|2[AB])\s?\d{3}\s?\d{3}\s?\d{2}\b")
+_MOTIF_SIRET = re.compile(r"\b\d{3}\s?\d{3}\s?\d{3}\s?\d{5}\b")
+_MOTIF_SIREN = re.compile(r"\b\d{3}\s?\d{3}\s?\d{3}\b")
+_MOTIF_IBAN = re.compile(r"\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,7}(?:\s?[A-Z0-9]{1,4})?\b")
+
+_CONTEXTE_NIR = re.compile(r"(?i)\bNIR\b|s[ée]curit[ée]\s+sociale|\bINSEE\b")
+_CONTEXTE_SIRET = re.compile(r"(?i)\bSIRET\b")
+_CONTEXTE_SIREN = re.compile(r"(?i)\bSIREN\b")
+_CONTEXTE_IBAN = re.compile(r"(?i)\bIBAN\b|\bRIB\b|compte bancaire")
+
 RECONNAISSEURS: list[Reconnaisseur] = [
     Reconnaisseur(
         type="FR_NIR",
-        motif=re.compile(r"\b[12]\s?\d{2}\s?\d{2}\s?(?:\d{2}|2[AB])\s?\d{3}\s?\d{3}\s?\d{2}\b"),
+        motif=_MOTIF_NIR,
         score=0.95,
         validation=nir_valide,
     ),
     Reconnaisseur(
+        type="FR_NIR_SUSPECT",
+        motif=_MOTIF_NIR,
+        score=0.7,
+        contexte=_CONTEXTE_NIR,
+    ),
+    Reconnaisseur(
+        type="FR_SIRET_SUSPECT",
+        motif=_MOTIF_SIRET,
+        score=0.7,
+        contexte=_CONTEXTE_SIRET,
+    ),
+    Reconnaisseur(
+        type="FR_SIREN_SUSPECT",
+        motif=_MOTIF_SIREN,
+        score=0.65,
+        contexte=_CONTEXTE_SIREN,
+    ),
+    Reconnaisseur(
+        type="IBAN_SUSPECT",
+        motif=_MOTIF_IBAN,
+        score=0.7,
+        contexte=_CONTEXTE_IBAN,
+        # « IBAN communiqué pour le remboursement des frais médicaux : ... » :
+        # le mot de contexte peut être loin du motif.
+        fenetre_contexte=80,
+    ),
+    Reconnaisseur(
+        type="RPPS",
+        motif=re.compile(r"\b\d{11}\b"),
+        score=0.9,
+        # Clé Luhn non exigée (Q4) : en contexte RPPS explicite, la fuite
+        # d'un numéro de professionnel de santé prime sur la clé.
+        contexte=re.compile(r"(?i)\bRPPS\b"),
+        fenetre_contexte=20,
+    ),
+    Reconnaisseur(
+        type="MATRICULE",
+        motif=re.compile(r"\b\d{2,6}-\d{2,6}\b"),
+        score=0.8,
+        contexte=re.compile(r"(?i)\bmatricule\b"),
+        fenetre_contexte=20,
+    ),
+    Reconnaisseur(
+        type="CODE_POSTAL",
+        # Cinq chiffres immédiatement suivis d'un mot capitalisé : un code
+        # postal devant sa commune (« 82000 Montauban »), ré-identifiant en
+        # combinaison même quand la commune est masquée par le NER.
+        motif=re.compile(r"\b(\d{5})(?=\s+[A-ZÀÂÉÈÊÎÔÙÛ])"),
+        score=0.75,
+        groupe=1,
+    ),
+    Reconnaisseur(
         type="FR_SIRET",
-        motif=re.compile(r"\b\d{3}\s?\d{3}\s?\d{3}\s?\d{5}\b"),
+        motif=_MOTIF_SIRET,
         score=0.9,
         validation=lambda v: luhn_valide(_sans_separateurs(v)),
     ),
     Reconnaisseur(
         type="FR_SIREN",
-        motif=re.compile(r"\b\d{3}\s?\d{3}\s?\d{3}\b"),
+        motif=_MOTIF_SIREN,
         score=0.85,
         validation=lambda v: luhn_valide(_sans_separateurs(v)),
     ),
     Reconnaisseur(
         type="IBAN",
-        motif=re.compile(r"\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,7}(?:\s?[A-Z0-9]{1,4})?\b"),
+        motif=_MOTIF_IBAN,
         score=0.95,
         validation=iban_valide,
     ),
@@ -208,6 +292,40 @@ def _resoudre_chevauchements(candidats: list[EntiteDetectee]) -> list[EntiteDete
     return sorted(retenues, key=lambda e: e.debut)
 
 
+# Types probabilistes dont les empans contigus fusionnent : le NER découpe
+# parfois une même mention (« avenue de l' » + « Europe »), produisant deux
+# placeholders collés dans le texte pseudonymisé. Les types déterministes ne
+# fusionnent jamais (deux NIR côte à côte restent deux entités).
+_TYPES_FUSIONNABLES = {"PERSONNE", "ORGANISATION", "LIEU"}
+_LIANTS = " '’-"
+
+
+def _fusionner_adjacentes(
+    entites: list[EntiteDetectee], texte: str
+) -> list[EntiteDetectee]:
+    fusionnees: list[EntiteDetectee] = []
+    for entite in entites:
+        if fusionnees:
+            precedente = fusionnees[-1]
+            ecart = texte[precedente.fin : entite.debut]
+            if (
+                entite.type == precedente.type
+                and entite.type in _TYPES_FUSIONNABLES
+                and len(ecart) <= 1
+                and all(c in _LIANTS for c in ecart)
+            ):
+                fusionnees[-1] = EntiteDetectee(
+                    type=precedente.type,
+                    debut=precedente.debut,
+                    fin=entite.fin,
+                    score=min(precedente.score, entite.score),
+                    valeur=texte[precedente.debut : entite.fin],
+                )
+                continue
+        fusionnees.append(entite)
+    return fusionnees
+
+
 def detecter(texte: str, moteurs: Iterable[Moteur] = ()) -> list[EntiteDetectee]:
     """Détection : reconnaisseurs C1 plus moteurs fournis, puis résolution REQ-016."""
     candidats: list[EntiteDetectee] = []
@@ -215,4 +333,4 @@ def detecter(texte: str, moteurs: Iterable[Moteur] = ()) -> list[EntiteDetectee]
         candidats.extend(reconnaisseur.reconnaitre(texte))
     for moteur in moteurs:
         candidats.extend(moteur.reconnaitre(texte))
-    return _resoudre_chevauchements(candidats)
+    return _fusionner_adjacentes(_resoudre_chevauchements(candidats), texte)

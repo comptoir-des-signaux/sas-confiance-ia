@@ -58,14 +58,125 @@ def test_le_siren_contenu_dans_un_siret_n_est_pas_double_compte():
     assert [e.type for e in entites] == ["FR_SIRET"]
 
 
-def test_un_nir_a_cle_fausse_n_est_pas_detecte():
+def test_un_nir_a_cle_fausse_en_contexte_est_masque_en_suspect():
+    # Arbitrage Q4 : donnée fictive ou faute de frappe, la fuite prime sur
+    # la pureté de la clé DÈS QUE le contexte est explicite. Le type
+    # distinct dit au réviseur que la clé n'a pas validé.
     entites = detecter("Numéro de sécurité sociale 1 80 03 74 118 218 23.")
     assert not [e for e in entites if e.type == "FR_NIR"]
+    (suspect,) = [e for e in entites if e.type == "FR_NIR_SUSPECT"]
+    assert suspect.valeur == "1 80 03 74 118 218 23"
+    assert suspect.score < 0.95
 
 
-def test_un_iban_a_cle_fausse_n_est_pas_detecte():
+def test_un_nir_a_cle_fausse_sans_contexte_reste_ignore():
+    # Sans mot de contexte, la précision prime (Q4) : le juge C3 couvre.
+    entites = detecter("Le relevé porte le numéro 1 80 03 74 118 218 23 en marge.")
+    assert not [e for e in entites if e.type.startswith("FR_NIR")]
+
+
+def test_un_nir_a_cle_fausse_mais_luhn_valide_n_est_pas_une_carte():
+    # Vu sur le PV de conseil médical : deux NIR fictifs passaient Luhn et
+    # partaient en [CARTE_xxx]. Le contexte NIR prime (REQ-016 étendue).
+    entites = detecter("NIR : 1 76 12 69 123 094 58.")
+    (suspect,) = [e for e in entites if e.type == "FR_NIR_SUSPECT"]
+    assert suspect.valeur == "1 76 12 69 123 094 58"
+    assert not [e for e in entites if e.type == "CARTE_BANCAIRE"]
+
+
+def test_un_nir_valide_reste_prioritaire_sur_le_suspect():
+    entites = detecter("NIR : 1 80 03 74 118 218 22.")
+    assert [e.type for e in entites] == ["FR_NIR"]
+
+
+def test_un_siret_a_luhn_invalide_en_contexte_est_masque_en_suspect():
+    entites = detecter("Commune de Castelsarrasin, SIRET 218 200 339 00017.")
+    (suspect,) = [e for e in entites if e.type == "FR_SIRET_SUSPECT"]
+    assert suspect.valeur == "218 200 339 00017"
+    # Le préfixe SIREN à Luhn valide ne découpe pas le SIRET suspect.
+    assert not [e for e in entites if e.type == "FR_SIREN"]
+
+
+def test_un_siret_suspect_couvre_aussi_le_prefixe_siren_valide():
+    # « SIRET 200 069 433 00025 » : SIREN valide + NIC. Le masquage partiel
+    # ([SIREN_001] 00025) laissait fuir le NIC : le suspect couvre tout.
+    entites = detecter("Employeur : SIRET 200 069 433 00025.")
+    (suspect,) = [e for e in entites if e.type == "FR_SIRET_SUSPECT"]
+    assert suspect.valeur == "200 069 433 00025"
+
+
+def test_un_iban_a_cle_fausse_en_contexte_est_masque_en_suspect():
     entites = detecter("IBAN : FR12 3000 3000 1100 0987 6543 185.")
     assert not [e for e in entites if e.type == "IBAN"]
+    (suspect,) = [e for e in entites if e.type == "IBAN_SUSPECT"]
+    assert suspect.valeur == "FR12 3000 3000 1100 0987 6543 185"
+
+
+def test_un_iban_a_cle_fausse_en_contexte_eloigne_est_masque():
+    entites = detecter(
+        "IBAN communiqué pour le remboursement des frais médicaux : "
+        "FR76 1027 8021 3100 0204 1980 159."
+    )
+    assert [e for e in entites if e.type == "IBAN_SUSPECT"]
+
+
+def test_un_rpps_est_detecte_en_contexte():
+    # La clé Luhn n'est pas exigée (Q4 : la fuite prime pour le RPPS).
+    entites = detecter("docteur Hélène Vasseur (RPPS 10100456789), présente.")
+    (rpps,) = [e for e in entites if e.type == "RPPS"]
+    assert rpps.valeur == "10100456789"
+
+
+def test_onze_chiffres_sans_contexte_rpps_restent_ignores():
+    entites = detecter("Le lot 10100456789 est archivé au dépôt.")
+    assert not [e for e in entites if e.type == "RPPS"]
+
+
+def test_un_matricule_est_detecte_en_contexte():
+    entites = detecter("Matricule 2014-0883. Grade : adjoint technique.")
+    (matricule,) = [e for e in entites if e.type == "MATRICULE"]
+    assert matricule.valeur == "2014-0883"
+
+
+def test_un_code_postal_devant_une_commune_est_masque():
+    entites = detecter("Adresse : 27 rue des Carmes, 82000 Montauban.")
+    assert any(e.type == "CODE_POSTAL" and e.valeur == "82000" for e in entites)
+
+
+def test_cinq_chiffres_sans_commune_ne_sont_pas_un_code_postal():
+    entites = detecter("La facture s'élève à 82000 euros hors taxes.")
+    assert not [e for e in entites if e.type == "CODE_POSTAL"]
+
+
+def test_les_entites_adjacentes_de_meme_type_fusionnent():
+    # Vu sur le PV : « avenue de l'Europe » détectée en deux morceaux
+    # adjacents produisait « [LIEU_018][LIEU_019] » (texte mutilé, REQ-002
+    # préservée mais utilité dégradée). Fusion des empans contigus de même
+    # type probabiliste.
+    class MoteurFictif:
+        def reconnaitre(self, texte):
+            return [
+                EntiteDetectee("LIEU", 3, 15, 0.8, texte[3:15]),
+                EntiteDetectee("LIEU", 15, 21, 0.7, texte[15:21]),
+            ]
+
+    texte = "19 avenue de l'Europe, à Valence."
+    entites = detecter(texte, moteurs=[MoteurFictif()])
+    lieux = [e for e in entites if e.type == "LIEU"]
+    assert ("LIEU", 3, 21, texte[3:21]) in [(e.type, e.debut, e.fin, e.valeur) for e in lieux]
+
+
+def test_deux_types_differents_adjacents_ne_fusionnent_pas():
+    class MoteurFictif:
+        def reconnaitre(self, texte):
+            return [
+                EntiteDetectee("PERSONNE", 0, 4, 0.8, texte[0:4]),
+                EntiteDetectee("LIEU", 5, 13, 0.7, texte[5:13]),
+            ]
+
+    texte = "Jean Toulouse arrive."
+    entites = detecter(texte, moteurs=[MoteurFictif()])
+    assert [e.type for e in entites] == ["PERSONNE", "LIEU"]
 
 
 def test_une_date_hors_contexte_naissance_n_est_pas_une_date_de_naissance():

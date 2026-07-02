@@ -18,6 +18,16 @@ ETIQUETTES = {
     "FR_SIRET": "SIRET",
     "FR_SIREN": "SIREN",
     "IBAN": "IBAN",
+    # Types fail-safe de Q4 : motif structurel à clé invalide, masqué en
+    # contexte explicite ; l'étiquette distincte signale au réviseur que la
+    # clé n'a pas validé (donnée fictive ou faute de frappe).
+    "FR_NIR_SUSPECT": "NIR_SUSPECT",
+    "FR_SIRET_SUSPECT": "SIRET_SUSPECT",
+    "FR_SIREN_SUSPECT": "SIREN_SUSPECT",
+    "IBAN_SUSPECT": "IBAN_SUSPECT",
+    "RPPS": "RPPS",
+    "MATRICULE": "MATRICULE",
+    "CODE_POSTAL": "CODE_POSTAL",
     "EMAIL": "EMAIL",
     "TELEPHONE": "TELEPHONE",
     "CARTE_BANCAIRE": "CARTE",
