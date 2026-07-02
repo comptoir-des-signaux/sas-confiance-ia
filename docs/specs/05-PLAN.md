@@ -101,6 +101,16 @@ Passe Ollama optionnelle, sortie JSON stricte, candidats en revue humaine,
 test réseau zéro appel sortant, éval canaris.
 **REQ :** 014.
 
+### Lot 13 bis : durcissement de la détection (arbitrage Q4, 2026-07-02)
+Né d'un test réel sur un PV fictif de conseil médical (intégré au corpus :
+`07-conseil-medical.md` + oracle). Fail-safe contextuel : motifs structurels
+à clé invalide masqués en types `*_SUSPECT` quand un mot de contexte les
+précède (NIR, SIRET, SIREN, IBAN) ; nouveaux types RPPS, MATRICULE,
+CODE_POSTAL ; priorité REQ-016 étendue (un NIR fictif ne part plus en
+CARTE) ; fusion des empans NER contigus de même type (fin des placeholders
+collés). Voir QUESTIONS.md Q4 pour l'arbitrage et les limites.
+**REQ :** 001 (périmètre élargi), 016 (priorité étendue).
+
 ### Lot 14 : politiques par type et surrogates
 Politique configurable par type d'entité (cadrage §9.5), dates différenciées,
 surrogates genrés optionnels (Faker fr_FR).

@@ -84,3 +84,35 @@ proxy), jamais en extrait brut en mode sérieux. La justification (prose du
 modèle, susceptible de citer des valeurs) n'est exposée qu'en mode
 démonstration. Un candidat non localisable dans le texte (paraphrase,
 hallucination F7) est écarté et compté, jamais transmis en clair.
+
+## Q4 : identifiants structurés à clé invalide (fail-safe contextuel)
+
+**Constat (2026-07-02, test réel sur PV fictif de conseil médical).** La
+détection C1 héritait de la philosophie « clé validée ou rien » : excellente
+précision, mais un document d'atelier aux clés fictives (12 NIR, 11 SIRET,
+2 IBAN à clés invalides) traverse le sas EN CLAIR, et une faute de frappe
+dans un NIR réel fuirait de même. Deux NIR à clé invalide passaient par
+hasard le Luhn et partaient en [CARTE_xxx]. Aucun reconnaisseur RPPS,
+matricule ni code postal.
+
+**Arbitrage (Pascal Chevallot, 2026-07-02) : masquer en contexte.**
+
+- Un motif structurel (NIR, SIRET, SIREN, IBAN) à clé INVALIDE est masqué
+  dès qu'un mot de contexte explicite le précède (« NIR », « sécurité
+  sociale », « SIRET », « IBAN »...), sous un type distinct `*_SUSPECT` à
+  score moindre : le réviseur voit que la clé n'a pas validé (donnée fictive
+  ou faute de frappe). La clé valide reste le cas sûr, prioritaire.
+- Sans contexte, un motif à clé invalide reste ignoré (précision préservée,
+  limite documentée) : le juge C3 reste la parade pour ces cas.
+- Nouveaux types : RPPS (11 chiffres en contexte « RPPS », clé Luhn non
+  exigée : la fuite prime), MATRICULE (contexte « matricule »), CODE_POSTAL
+  (5 chiffres devant un mot capitalisé).
+- Le PV fictif entre au corpus (`07-conseil-medical.md`) avec son oracle :
+  la non-fuite REQ-001 le couvre désormais.
+
+**Limites documentées.** Les numéros de rue restent en clair (« 27
+[LIEU_006] ») ; « CONSEIL MÉDICAL » en majuscules échappe au NER ; les
+pathologies restent en clair PAR CONCEPTION (utilité métier : politiques par
+type au Lot 14, généralisation en Phase 3) ; la coréférence ne rattache que
+les PERSONNE (une ORGANISATION peut recevoir deux placeholders selon la
+forme de surface).
