@@ -1,0 +1,53 @@
+{
+  "_commentaire": "Vérité terrain des canaris (06-canaris.md) : identifiants indirects que C1 et C2 manquent par construction, territoire du juge LLM (02-AI-SPEC §4.3). Un canari compte comme signalé si un candidat du juge recouvre l'un de ses extraits. Document entièrement fictif.",
+  "canaris": [
+    {
+      "id": "fonction-rare-epci",
+      "description": "Fonction unique dans un petit EPCI nommé",
+      "extraits": [
+        "chef du service assainissement",
+        "communauté de communes du Quercy Vert"
+      ]
+    },
+    {
+      "id": "elu-petite-commune",
+      "description": "Mandat croisé avec la plus petite commune membre",
+      "extraits": [
+        "élu délégué aux travaux",
+        "plus petite commune membre"
+      ]
+    },
+    {
+      "id": "professionnelle-unique",
+      "description": "Unique professionnelle de santé de la commune",
+      "extraits": [
+        "unique kinésithérapeute",
+        "kinésithérapeute installée dans la commune"
+      ]
+    },
+    {
+      "id": "surnom-jojo",
+      "description": "Surnom d'agent croisé avec sa date de recrutement",
+      "extraits": [
+        "Jojo",
+        "recruté en mars dernier au service urbanisme"
+      ]
+    },
+    {
+      "id": "predecesseur-mute",
+      "description": "Périphrase : prédécesseur muté après vingt-deux ans",
+      "extraits": [
+        "prédécesseur",
+        "vingt-deux ans dans le même bureau"
+      ]
+    },
+    {
+      "id": "matricule-atypique",
+      "description": "Matricule croisé avec une combinaison ré-identifiante",
+      "extraits": [
+        "agent numéro 7",
+        "seul titulaire du permis poids lourd"
+      ]
+    }
+  ]
+}
