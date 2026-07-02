@@ -158,3 +158,35 @@ def test_la_page_echappe_les_valeurs_avant_insertion_html():
 
     assert "function echapper" in PAGE_HTML
     assert "echapper(d.valeur)" in PAGE_HTML
+
+
+def test_la_page_porte_la_palette_comptoir_des_signaux():
+    # Identité visuelle Comptoir des Signaux (2026-07-02) : bleu à-plat
+    # principal, jaune or de mise en valeur, bleu du texte sur fond clair.
+    from sas_confiance_ia.ui import PAGE_HTML
+
+    assert "#1F519B" in PAGE_HTML
+    assert "#FDC949" in PAGE_HTML
+    assert "#182C49" in PAGE_HTML
+    assert "#0f6f5c" not in PAGE_HTML
+
+
+def test_un_exemple_synthetique_active_le_mode_demo():
+    # Pédagogie d'atelier : un bouton charge un exemple entièrement
+    # synthétique (clés valides) et bascule en mode démonstration, jamais
+    # en mode sérieux.
+    from sas_confiance_ia.ui import PAGE_HTML
+
+    assert 'id="exemple"' in PAGE_HTML
+    assert "2 85 05 78 006 084 41" in PAGE_HTML  # NIR synthétique, clé valide
+    assert "845 124 789 00007" in PAGE_HTML  # SIRET synthétique, Luhn valide
+    assert 'el("mode").value = "demo"' in PAGE_HTML
+
+
+def test_les_etapes_sont_numerotees():
+    # Sous-titres pédagogiques : le parcours se lit comme trois étapes.
+    from sas_confiance_ia.ui import PAGE_HTML
+
+    assert "1. Texte à pseudonymiser" in PAGE_HTML
+    assert "2. Texte pseudonymisé" in PAGE_HTML
+    assert "3. Réponse de l'IA" in PAGE_HTML

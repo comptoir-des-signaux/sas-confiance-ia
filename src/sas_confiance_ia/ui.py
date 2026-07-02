@@ -116,7 +116,10 @@ PAGE_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sas Confiance IA : sas de pseudonymisation avant IA</title>
 <style>
-  :root { --encre: #1c2431; --fond: #f5f4f0; --accent: #0f6f5c; --demo: #a4520a; }
+  /* Palette Comptoir des Signaux (https://www.comptoirdessignaux.com/) :
+     bleu à-plat principal, jaune or de mise en valeur, bleu du texte. */
+  :root { --encre: #182C49; --fond: #f5f4f0; --accent: #1F519B;
+          --or: #FDC949; --demo: #a4520a; }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Georgia, "Times New Roman", serif;
          background: var(--fond); color: var(--encre); }
@@ -134,7 +137,7 @@ PAGE_HTML = """<!DOCTYPE html>
   button { padding: .55rem 1.1rem; border: none; border-radius: 4px;
            background: var(--accent); color: #fff; font-size: .95rem;
            cursor: pointer; }
-  button.secondaire { background: #55524a; }
+  button.secondaire { background: var(--encre); }
   button:disabled { opacity: .5; cursor: default; }
   #bandeau-demo { display: none; margin: 1rem 0 0; padding: .6rem 1rem;
                   background: var(--demo); color: #fff; border-radius: 4px;
@@ -146,7 +149,7 @@ PAGE_HTML = """<!DOCTYPE html>
   table { border-collapse: collapse; margin-top: .5rem; }
   th, td { border: 1px solid #c9c4b8; padding: .35rem .7rem; text-align: left;
            font-size: .9rem; }
-  th { background: #e9e6de; }
+  th { background: var(--or); }
   footer { padding: 1rem 2rem 2rem; color: #666; font-size: .85rem;
            max-width: 60rem; margin: 0 auto; }
 </style>
@@ -162,7 +165,7 @@ PAGE_HTML = """<!DOCTYPE html>
   <div id="bandeau-demo">MODE DÉMONSTRATION : valeurs visibles, à réserver aux
     données synthétiques. Ne jamais y coller de vraies données.</div>
 
-  <label for="texte">Texte à pseudonymiser</label>
+  <label for="texte">1. Texte à pseudonymiser</label>
   <textarea id="texte"
     placeholder="Collez ici le texte contenant des données personnelles."></textarea>
 
@@ -180,12 +183,13 @@ PAGE_HTML = """<!DOCTYPE html>
     </div>
     <button id="pseudonymiser">Pseudonymiser</button>
     <button id="reidentifier" class="secondaire" disabled>Ré-identifier une réponse</button>
+    <button id="exemple" class="secondaire">Charger un exemple (mode démo)</button>
   </div>
 
   <div id="erreur"></div>
 
   <section class="resultat" id="resultat">
-    <label for="sortie">Texte pseudonymisé (à copier vers votre IA)</label>
+    <label for="sortie">2. Texte pseudonymisé (à copier vers votre IA)</label>
     <textarea id="sortie" readonly></textarea>
     <div class="ligne">
       <button id="copier" class="secondaire">Copier</button>
@@ -195,7 +199,7 @@ PAGE_HTML = """<!DOCTYPE html>
   </section>
 
   <section class="resultat" id="zone-reidentification">
-    <label for="reponse-ia">Réponse de l'IA à ré-identifier</label>
+    <label for="reponse-ia">3. Réponse de l'IA à ré-identifier</label>
     <textarea id="reponse-ia"
       placeholder="Collez ici la réponse contenant des placeholders."></textarea>
     <label for="texte-final">Texte ré-identifié (zone de confiance)</label>
@@ -205,7 +209,8 @@ PAGE_HTML = """<!DOCTYPE html>
 <footer>
   Le vault de correspondance ne quitte jamais cette instance. La
   pseudonymisation assiste le responsable de traitement : elle ne remplace ni
-  DPO, ni AIPD, ni registre.
+  DPO, ni AIPD, ni registre. Un commun numérique porté par
+  <a href="https://www.comptoirdessignaux.com/">Comptoir des Signaux</a>.
 </footer>
 <script>
 const el = (id) => document.getElementById(id);
@@ -223,6 +228,20 @@ el("dossier").value = "dossier-" + crypto.randomUUID().slice(0, 13);
 
 el("mode").addEventListener("change", () => {
   document.body.classList.toggle("demo-actif", el("mode").value === "demo");
+});
+
+// Exemple d'atelier : données entièrement synthétiques à clés valides
+// (NIR, SIRET Luhn, IBAN). Il bascule TOUJOURS en mode démonstration.
+const EXEMPLE_DEMO = `Madame Camille Durand, née le 12 mai 1985 à Poitiers, \
+numéro de sécurité sociale 2 85 05 78 006 084 41, sollicite une aide de la \
+commune. Contact : camille.durand@exemple.fr ou 06 12 34 56 78. Son \
+employeur, la boulangerie Aux Blés d'Or (SIRET 845 124 789 00007), verse \
+son salaire sur le compte FR76 3000 6000 0112 3456 7890 189.`;
+
+el("exemple").addEventListener("click", () => {
+  el("texte").value = EXEMPLE_DEMO;
+  el("mode").value = "demo";
+  el("mode").dispatchEvent(new Event("change"));
 });
 
 function montrerErreur(message) {
