@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from .journal import Journal
+from .juge import JugeLLM, executer_passe
 from .pseudonymiseur import MOTIF_PLACEHOLDER, Pseudonymiseur
 
 
@@ -34,7 +35,11 @@ class RequeteReidentificationUI(BaseModel):
     dossier_id: str
 
 
-def creer_routeur_ui(pseudonymiseur: Pseudonymiseur, journal: Journal) -> APIRouter:
+def creer_routeur_ui(
+    pseudonymiseur: Pseudonymiseur,
+    journal: Journal,
+    juge: JugeLLM | None = None,
+) -> APIRouter:
     routeur = APIRouter()
     vault = pseudonymiseur.vault
 
@@ -63,6 +68,16 @@ def creer_routeur_ui(pseudonymiseur: Pseudonymiseur, journal: Journal) -> APIRou
             vault.marquer_dossier(requete.dossier_id, "serieux")
 
         resultat = pseudonymiseur.pseudonymiser(requete.texte, dossier_id=requete.dossier_id)
+        # Passe juge (C3, REQ-014) sur le texte déjà pseudonymisé : les
+        # segments signalés viennent du document de l'utilisateur (Q3),
+        # jamais du vault ; ils partent en revue, jamais en remplacement.
+        bloc_juge = executer_passe(
+            juge,
+            resultat.texte,
+            journal=journal,
+            requete_id=str(uuid.uuid4()),
+            dossier_id=requete.dossier_id,
+        )
         detections: list[dict[str, Any]] = []
         for remplacement in resultat.remplacements:
             entite = remplacement.entite
@@ -82,6 +97,7 @@ def creer_routeur_ui(pseudonymiseur: Pseudonymiseur, journal: Journal) -> APIRou
             "comptes_par_type": resultat.comptes_par_type,
             "detections": detections,
             "ambiguites_coreference": resultat.ambiguites,
+            "juge": bloc_juge,
         }
 
     @routeur.post("/ui/reidentifier")
@@ -284,6 +300,20 @@ function afficherSynthese(donnees) {
   if (donnees.ambiguites_coreference.length) {
     html += `<p>Rattachements à vérifier (homonymes possibles) :
       ${donnees.ambiguites_coreference.map(echapper).join(", ")}</p>`;
+  }
+  if (donnees.juge && donnees.juge.actif && donnees.juge.candidats.length) {
+    const candidats = donnees.juge.candidats
+      .map((c) => `<tr><td>${echapper(c.segment)}</td><td>${echapper(c.type_candidat)}</td>
+        <td>${echapper(c.justification)}</td><td>${c.score.toFixed(2)}</td></tr>`)
+      .join("");
+    html += `<h3>Identifiants indirects à revoir (juge LLM local)</h3>
+      <p>Signalés pour relecture humaine : le sas ne les a PAS remplacés.</p>
+      <table><tr><th>Segment</th><th>Type</th><th>Justification</th><th>Score</th></tr>
+      ${candidats}</table>`;
+  }
+  if (donnees.juge && donnees.juge.erreur_type) {
+    html += `<p>Le juge LLM a échoué (${echapper(donnees.juge.erreur_type)}) :
+      couverture C1+C2 seule pour cet appel.</p>`;
   }
   if (donnees.mode === "demo") {
     const details = donnees.detections

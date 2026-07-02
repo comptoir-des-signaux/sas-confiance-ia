@@ -26,6 +26,7 @@ class Journal:
         taille_approx: int | None = None,
         integrite: str | None = None,
         erreur_type: str | None = None,
+        candidats_juge: int | None = None,
     ) -> None:
         evenement: dict[str, object] = {
             "horodatage": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -43,4 +44,7 @@ class Journal:
             evenement["integrite"] = integrite
         if erreur_type is not None:
             evenement["erreur_type"] = erreur_type
+        if candidats_juge is not None:
+            # Compte seul (REQ-003) : jamais les segments signalés par le juge.
+            evenement["candidats_juge"] = candidats_juge
         self._logger.info(json.dumps(evenement, ensure_ascii=False))

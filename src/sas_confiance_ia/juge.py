@@ -18,10 +18,11 @@ score minimal configurable, placeholders déjà couverts filtrés.
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from .backends import Backend, ErreurBackend
+from .journal import Journal
 from .pseudonymiseur import MOTIF_PLACEHOLDER
 
 CONSIGNE_JUGE = (
@@ -115,6 +116,38 @@ class JugeLLM:
                 )
             )
         return candidats
+
+
+def executer_passe(
+    juge: "JugeLLM | None",
+    texte: str,
+    *,
+    journal: Journal,
+    requete_id: str,
+    dossier_id: str,
+) -> dict[str, Any]:
+    """Passe juge tolérante aux pannes, partagée par le proxy et l'UI.
+
+    Le juge est optionnel et dégradable (REQ-014) : son échec est journalisé
+    (type d'erreur seul) et n'interrompt jamais le flux ; la couverture est
+    alors celle de C1+C2, ce que le bloc renvoyé documente.
+    """
+    bloc: dict[str, Any] = {"actif": juge is not None, "candidats": []}
+    if juge is None:
+        return bloc
+    try:
+        bloc["candidats"] = [asdict(candidat) for candidat in juge.signaler(texte)]
+    except ErreurJuge as erreur:
+        bloc["erreur_type"] = erreur.erreur_type
+        journal.enregistrer(
+            requete_id=requete_id,
+            dossier_id=dossier_id,
+            backend=type(juge.backend).__name__,
+            modele=juge.modele,
+            statut="erreur_juge",
+            erreur_type=erreur.erreur_type,
+        )
+    return bloc
 
 
 def _elements_conformes(contenu: str) -> list[dict[str, Any]]:

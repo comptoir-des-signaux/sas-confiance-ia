@@ -176,3 +176,145 @@ def test_le_juge_fonctionne_sur_le_backend_http_sans_reseau():
     )
     juge = JugeLLM(backend, modele="juge-test")
     assert len(juge.signaler(TEXTE)) == 2
+
+
+# --- Intégration dans le flux (proxy et UI) ---------------------------------
+
+
+def creer_client(juge=None):
+    from fastapi.testclient import TestClient
+
+    from sas_confiance_ia.api import creer_application
+    from sas_confiance_ia.pseudonymiseur import Pseudonymiseur
+    from sas_confiance_ia.vault import VaultMemoire
+
+    backend_applicatif = BackendCapture()
+    application = creer_application(
+        pseudonymiseur=Pseudonymiseur(VaultMemoire()),
+        backend=backend_applicatif,
+        modeles=["modele-de-test"],
+        juge=juge,
+    )
+    return TestClient(application), backend_applicatif
+
+
+TEXTE_AVEC_EMAIL = (
+    "Marie Martin, joignable à marie.martin@exemple.fr, surnommée Jojo au bureau."
+)
+
+
+def test_le_proxy_expose_les_candidats_du_juge():
+    juge, backend_juge = creer_juge(json.dumps(CANDIDATS_VALIDES))
+    client, _ = creer_client(juge=juge)
+    reponse = client.post(
+        "/v1/chat/completions",
+        json={
+            "model": "modele-de-test",
+            "messages": [{"role": "user", "content": TEXTE_AVEC_EMAIL}],
+        },
+    )
+    bloc = reponse.json()["sas_confiance_ia"]["juge"]
+    assert bloc["actif"] is True
+    assert [c["segment"] for c in bloc["candidats"]] == [
+        "chef du service assainissement",
+        "Jojo",
+    ]
+    assert set(bloc["candidats"][0]) == {"segment", "type_candidat", "justification", "score"}
+
+
+def test_le_juge_recoit_le_texte_deja_pseudonymise():
+    # 02-AI-SPEC §2 : le juge ne voit les valeurs brutes que pour les
+    # segments encore non couverts ; ce que C1 a détecté est déjà protégé.
+    juge, backend_juge = creer_juge("[]")
+    client, _ = creer_client(juge=juge)
+    client.post(
+        "/v1/chat/completions",
+        json={
+            "model": "modele-de-test",
+            "messages": [{"role": "user", "content": TEXTE_AVEC_EMAIL}],
+        },
+    )
+    (payload_juge,) = backend_juge.payloads_bruts
+    assert "marie.martin@exemple.fr" not in payload_juge
+    assert "[EMAIL_001]" in payload_juge
+
+
+def test_sans_juge_le_sas_reste_fonctionnel():
+    # REQ-014 : le juge est optionnel par conception, absent = documenté
+    # moins couvrant, jamais une erreur.
+    client, _ = creer_client(juge=None)
+    reponse = client.post(
+        "/v1/chat/completions",
+        json={
+            "model": "modele-de-test",
+            "messages": [{"role": "user", "content": TEXTE_AVEC_EMAIL}],
+        },
+    )
+    assert reponse.status_code == 200
+    assert reponse.json()["sas_confiance_ia"]["juge"] == {"actif": False, "candidats": []}
+
+
+def test_une_erreur_du_juge_n_empeche_pas_le_flux(caplog):
+    import logging
+
+    juge, _ = creer_juge("sortie qui n'est pas du JSON")
+    client, _ = creer_client(juge=juge)
+    with caplog.at_level(logging.INFO):
+        reponse = client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "modele-de-test",
+                "messages": [{"role": "user", "content": TEXTE_AVEC_EMAIL}],
+            },
+        )
+    assert reponse.status_code == 200
+    bloc = reponse.json()["sas_confiance_ia"]["juge"]
+    assert bloc == {"actif": True, "candidats": [], "erreur_type": "SortieJugeInvalide"}
+    enregistrements = [r for r in caplog.records if r.name == "sas_confiance_ia.journal"]
+    assert any("erreur_juge" in r.getMessage() for r in enregistrements)
+
+
+def test_le_journal_ne_contient_jamais_les_segments_du_juge(caplog):
+    import logging
+
+    juge, _ = creer_juge(json.dumps(CANDIDATS_VALIDES))
+    client, _ = creer_client(juge=juge)
+    with caplog.at_level(logging.INFO):
+        client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "modele-de-test",
+                "messages": [{"role": "user", "content": TEXTE_AVEC_EMAIL}],
+            },
+        )
+    texte_journal = "\n".join(
+        r.getMessage() for r in caplog.records if r.name == "sas_confiance_ia.journal"
+    )
+    assert "chef du service assainissement" not in texte_journal
+    assert "Jojo" not in texte_journal
+    # Le compte, lui, est une métadonnée de gouvernance légitime (REQ-003).
+    assert '"candidats_juge": 2' in texte_journal
+
+
+def test_l_ui_expose_les_candidats_du_juge():
+    juge, backend_juge = creer_juge(json.dumps(CANDIDATS_VALIDES))
+    client, _ = creer_client(juge=juge)
+    reponse = client.post(
+        "/ui/pseudonymiser",
+        json={"texte": TEXTE_AVEC_EMAIL, "dossier_id": "d-juge", "mode": "serieux"},
+    )
+    corps = reponse.json()
+    assert corps["juge"]["actif"] is True
+    assert [c["segment"] for c in corps["juge"]["candidats"]] == [
+        "chef du service assainissement",
+        "Jojo",
+    ]
+    (payload_juge,) = backend_juge.payloads_bruts
+    assert "marie.martin@exemple.fr" not in payload_juge
+
+
+def test_la_page_affiche_la_section_juge():
+    from sas_confiance_ia.ui import PAGE_HTML
+
+    assert "candidats" in PAGE_HTML
+    assert "Identifiants indirects" in PAGE_HTML

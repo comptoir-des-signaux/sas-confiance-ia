@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from .backends import Backend, ErreurBackend
 from .integrite import controler, normaliser_placeholders
 from .journal import Journal
+from .juge import JugeLLM, executer_passe
 from .pseudonymiseur import Pseudonymiseur
 
 # Parade F5 (02-AI-SPEC §3) : le LLM applicatif altère volontiers les
@@ -48,6 +49,7 @@ def creer_application(
     backend: Backend,
     modeles: list[str],
     journal: Journal | None = None,
+    juge: JugeLLM | None = None,
 ) -> FastAPI:
     journal = journal or Journal()
     application = FastAPI(title="Sas Confiance IA", docs_url=None, redoc_url=None)
@@ -58,7 +60,7 @@ def creer_application(
 
     from .ui import creer_routeur_ui
 
-    application.include_router(creer_routeur_ui(pseudonymiseur, journal))
+    application.include_router(creer_routeur_ui(pseudonymiseur, journal, juge=juge))
 
     @application.get("/health")
     def health() -> dict[str, str]:
@@ -121,6 +123,19 @@ def creer_application(
             ambiguites_coreference.update(resultat.ambiguites)
             messages_pseudonymises.append({"role": message.role, "content": resultat.texte})
 
+        # Passe juge (C3, REQ-014) AVANT l'envoi au backend applicatif : sur
+        # le texte déjà pseudonymisé, avant l'insertion de la consigne. En
+        # v1 les candidats partent en revue (bloc de réponse), jamais en
+        # remplacement : les segments signalés sont donc déjà partis vers le
+        # backend au moment où l'appelant les lit (limite documentée).
+        bloc_juge = executer_passe(
+            juge,
+            "\n\n".join(m["content"] for m in messages_pseudonymises),
+            journal=journal,
+            requete_id=requete_id,
+            dossier_id=dossier_id,
+        )
+
         if placeholders_envoyes:
             messages_pseudonymises.insert(
                 0, {"role": "system", "content": CONSIGNE_PRESERVATION_JETONS}
@@ -172,6 +187,7 @@ def creer_application(
             entites_par_type=entites_par_type,
             taille_approx=sum(len(m["content"]) for m in messages_pseudonymises),
             integrite=rapport.action,
+            candidats_juge=len(bloc_juge["candidats"]) if juge is not None else None,
         )
 
         return {
@@ -194,6 +210,10 @@ def creer_application(
                 # (REQ-011, F4) : à faire vérifier par un humain. Seuls les
                 # placeholders sont exposés, jamais les valeurs.
                 "ambiguites_coreference": sorted(ambiguites_coreference),
+                # Candidats d'identifiants indirects signalés par le juge
+                # LLM local (C3) : à revoir par un humain, jamais remplacés
+                # automatiquement en v1 (REQ-014, parade F7).
+                "juge": bloc_juge,
             },
         }
 
