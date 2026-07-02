@@ -118,6 +118,56 @@ def test_les_alias_survivent_au_redemarrage(tmp_path):
     assert vault2.valeur_pour("d1", p_avant) == "Jean Dupont"
 
 
+def test_deuxiemes_prenoms_contradictoires_ne_fusionnent_pas():
+    # F4 : « Jean Paul Dupont » et « Jean Marc Dupont » sont deux personnes.
+    r, _ = resolveur()
+    p1 = r.placeholder_pour("d1", "Jean Paul Dupont")
+    p2 = r.placeholder_pour("d1", "Jean Marc Dupont")
+    assert p1 != p2
+
+
+def test_civilites_de_genres_contradictoires_ne_fusionnent_pas():
+    # F4 : « M. Dupont » puis « Mme Dupont » : deux personnes, jamais fusionnées.
+    r, _ = resolveur()
+    p1 = r.placeholder_pour("d1", "M. Dupont")
+    p2 = r.placeholder_pour("d1", "Mme Dupont")
+    assert p1 != p2
+
+
+def test_le_genre_contradictoire_bloque_aussi_le_rattachement_au_nom_complet():
+    r, _ = resolveur()
+    p1 = r.placeholder_pour("d1", "M. Jean Dupont")
+    p2 = r.placeholder_pour("d1", "Mme Dupont")
+    assert p1 != p2
+
+
+def test_une_liaison_reduite_repasse_en_revue_quand_un_homonyme_apparait():
+    # F4 : « M. Dupont » lié à Jean Dupont, puis Pierre Dupont arrive dans le
+    # dossier. La liaison reste stable (cohérence REQ-011) mais tout nouvel
+    # usage de la forme réduite est signalé pour revue.
+    r, _ = resolveur()
+    p1 = r.placeholder_pour("d1", "Jean Dupont")
+    assert r.placeholder_pour("d1", "M. Dupont") == p1
+    assert r.ambiguites("d1") == set()
+    r.placeholder_pour("d1", "Pierre Dupont")
+    assert r.placeholder_pour("d1", "M. Dupont") == p1
+    assert p1 in r.ambiguites("d1")
+
+
+def test_a_completude_egale_la_forme_bien_casee_devient_canonique():
+    r, vault = resolveur()
+    p = r.placeholder_pour("d1", "jean dupont")
+    r.placeholder_pour("d1", "Jean Dupont")
+    assert vault.valeur_pour("d1", p) == "Jean Dupont"
+
+
+def test_une_forme_moins_bien_casee_ne_degrade_pas_la_canonique():
+    r, vault = resolveur()
+    p = r.placeholder_pour("d1", "Jean Dupont")
+    r.placeholder_pour("d1", "JEAN DUPONT")
+    assert vault.valeur_pour("d1", p) == "Jean Dupont"
+
+
 def test_le_vault_expose_les_valeurs_par_type():
     vault = VaultMemoire()
     vault.placeholder_pour("d1", "PERSONNE", "Jean Dupont")
