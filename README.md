@@ -5,7 +5,7 @@ françaises dans vos textes, remplacez-les par des pseudonymes, envoyez le texte
 protégé à un modèle de langage, puis ré-identifiez la réponse **en zone de
 confiance**. La table de correspondance ne quitte jamais votre infrastructure.
 
-Un commun numérique porté par [Comptoir des Signaux](https://www.comptoirdessignaux.com/),
+Un commun numérique porté par [Comptoir des Signaux](https://www.comptoirdessignaux.com),
 conçu pour les collectivités territoriales et la fonction publique, sous
 licence [EUPL-1.2](LICENSE).
 
@@ -41,7 +41,7 @@ documentées et mesurées, jamais masquées.
 
 ## État du projet
 
-**Phase 1 en cours (lots 9 et 10 livrés)** : plus de 100 tests automatisés
+**Phase 1 livrée** : plus de 200 tests automatisés
 prouvent les invariants de sécurité sur faux backend de capture : non-fuite
 des valeurs détectées, désormais au périmètre complet noms / lieux /
 organisations inclus (REQ-001), ré-identification exacte (REQ-002), journaux

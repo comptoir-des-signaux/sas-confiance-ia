@@ -158,7 +158,7 @@ PAGE_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sas Confiance IA : sas de pseudonymisation avant IA</title>
 <style>
-  /* Palette Comptoir des Signaux (https://www.comptoirdessignaux.com/) :
+  /* Palette Comptoir des Signaux (https://www.comptoirdessignaux.com) :
      bleu à-plat principal, jaune or de mise en valeur, bleu du texte. */
   :root { --encre: #182C49; --fond: #f5f4f0; --accent: #1F519B;
           --or: #FDC949; --demo: #a4520a; }
@@ -252,7 +252,7 @@ PAGE_HTML = """<!DOCTYPE html>
   Le vault de correspondance ne quitte jamais cette instance. La
   pseudonymisation assiste le responsable de traitement : elle ne remplace ni
   DPO, ni AIPD, ni registre. Un commun numérique porté par
-  <a href="https://www.comptoirdessignaux.com/">Comptoir des Signaux</a>.
+  <a href="https://www.comptoirdessignaux.com">Comptoir des Signaux</a>.
 </footer>
 <script>
 const el = (id) => document.getElementById(id);
