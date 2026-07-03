@@ -31,3 +31,6 @@ logs/
 .idea/
 .vscode/
 .DS_Store
+
+# Site MkDocs construit localement (publié par CI, jamais versionné)
+site/

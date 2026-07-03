@@ -12,7 +12,8 @@ formation par Comptoir des Signaux, à adapter à votre public.
   ([tutoriel d'installation](tutoriel-installation.md)) ; en salle sans
   GPU, un backend souverain distant fait l'affaire (le propos pédagogique
   ne change pas : la détection et le vault restent locaux).
-- Le [corpus synthétique](../corpus/synthetique/) du dépôt est ouvert dans
+- Le [corpus synthétique](https://github.com/comptoir-des-signaux/sas-confiance-ia/tree/main/corpus/synthetique)
+  du dépôt est ouvert dans
   un éditeur : c'est votre matière. **Jamais de document réel en atelier**,
   même « anonymisé à la main » : c'est précisément le réflexe que l'atelier
   veut déconstruire.

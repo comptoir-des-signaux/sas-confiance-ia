@@ -47,6 +47,11 @@ ner = [
 ner-repli-spacy = [
   "fr-core-news-lg @ https://github.com/explosion/spacy-models/releases/download/fr_core_news_lg-3.8.0/fr_core_news_lg-3.8.0-py3-none-any.whl",
 ]
+# Site de documentation (Lot 16, REQ-015) : MkDocs Material (MIT), publié
+# sur GitHub Pages par .github/workflows/docs.yml.
+docs = [
+  "mkdocs-material>=9.5,<10",
+]
 
 [build-system]
 requires = ["hatchling"]

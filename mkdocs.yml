@@ -1,0 +1,63 @@
+# Site de documentation (Lot 16, REQ-015) : construit par MkDocs Material,
+# publié sur GitHub Pages par .github/workflows/docs.yml.
+# Build local : uv pip install -e ".[docs]" && uv run mkdocs build --strict
+
+site_name: Sas Confiance IA
+site_description: >-
+  Sas de pseudonymisation avant IA pour les collectivités territoriales :
+  détection des données personnelles françaises, pseudonymes réversibles,
+  proxy OpenAI-compatible, ré-identification en zone de confiance.
+site_url: https://comptoir-des-signaux.github.io/sas-confiance-ia/
+repo_url: https://github.com/comptoir-des-signaux/sas-confiance-ia
+repo_name: comptoir-des-signaux/sas-confiance-ia
+edit_uri: edit/main/docs/
+copyright: >-
+  Comptoir des Signaux, licence EUPL-1.2. Corpus et exemples 100 % synthétiques.
+
+theme:
+  name: material
+  language: fr
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Passer en sombre
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Passer en clair
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.highlight
+
+nav:
+  - Accueil: index.md
+  - Utiliser le sas:
+      - Tutoriel d'installation: tutoriel-installation.md
+      - Guide de déploiement: deploiement.md
+      - Parcours formateur: parcours-formateur.md
+  - Mesures publiées:
+      - Évaluation de la détection (NER): eval/evaluation-ner.md
+      - Évaluation du juge LLM: eval/evaluation-juge.md
+  - Cadrage (transparence):
+      - PRD (produit): specs/01-PRD.md
+      - AI-SPEC (risques et parades): specs/02-AI-SPEC.md
+      - SPEC (exigences): specs/03-SPEC.md
+      - ADR (décisions): specs/04-ADR.md
+      - PLAN (feuille de route): specs/05-PLAN.md
+      - HANDOFF (consignes agents): specs/06-HANDOFF.md
+      - QUESTIONS (arbitrages): specs/QUESTIONS.md
+  - Publication:
+      - Checklist de publication: checklist-publication.md

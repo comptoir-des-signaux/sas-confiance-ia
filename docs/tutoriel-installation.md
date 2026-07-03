@@ -77,8 +77,8 @@ curl http://127.0.0.1:8787/health     # {"statut":"ok"}
 ## 5. Première pseudonymisation
 
 Ouvrez `http://127.0.0.1:8787/` : collez un texte (utilisez le
-[corpus synthétique](../corpus/synthetique/) du dépôt, jamais un vrai
-document pour vos essais), pseudonymisez, observez les types détectés,
+[corpus synthétique](https://github.com/comptoir-des-signaux/sas-confiance-ia/tree/main/corpus/synthetique)
+du dépôt, jamais un vrai document pour vos essais), pseudonymisez, observez les types détectés,
 ré-identifiez. La page `http://127.0.0.1:8787/fichiers` accepte le
 glisser-déposer (`.txt`, `.md`, `.csv`, `.docx`, `.pdf` textuel) et affiche
 l'original et la version pseudonymisée côte à côte.
@@ -131,7 +131,8 @@ streaming en non-streaming (REQ-010), c'est le comportement attendu.
   l'arrêt) : [déploiement, section 5](deploiement.md).
 - **Politiques par type** (conserver les SIREN, marquer les références de
   dossier pour revue...) : [déploiement, section 7](deploiement.md).
-- **Ce que le sas garantit et ne garantit pas** : [README](../README.md),
+- **Ce que le sas garantit et ne garantit pas** :
+  [README](https://github.com/comptoir-des-signaux/sas-confiance-ia#ce-que-le-sas-garantit-et-ne-garantit-pas),
   à lire avant tout usage sur documents réels.
 
 ## Dépannage
