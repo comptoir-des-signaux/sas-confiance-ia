@@ -1,8 +1,10 @@
-# Distribution de référence (ADR-013) : le sas seul par défaut, le service
-# Ollama en option via le profil « ollama » (GPU NVIDIA, container toolkit).
+# Distribution de référence (ADR-013) : le sas seul par défaut, les services
+# Ollama et OpenWebUI en option via leurs profils respectifs.
 #
-#   docker compose up --build                    # sas seul (backend externe)
-#   docker compose --profile ollama up --build   # sas + Ollama local
+#   docker compose up --build                              # sas seul (backend externe)
+#   docker compose --profile ollama up --build             # sas + Ollama local
+#   docker compose --profile openwebui up --build          # sas + OpenWebUI
+#   docker compose --profile ollama --profile openwebui up # sas + Ollama + OpenWebUI
 #
 # Topologie T2 (serveur) : même compose sans le profil ollama, avec
 # SAS_BACKEND_BASE_URL pointé vers Infomaniak ou Scaleway (voir docs/).
@@ -60,6 +62,27 @@ services:
               count: all
               capabilities: [gpu]
 
+  openwebui:
+    # Interface de chat (type ChatGPT) branchée sur le sas. Produit tiers
+    # (https://github.com/open-webui/open-webui), non inclus dans le code du
+    # projet : ce service est un confort de déploiement. Le sas fonctionne
+    # seul avec sa propre UI minimale sur http://127.0.0.1:8787/.
+    # Épingler une version précise en production plutôt que main.
+    image: ${OPENWEBUI_IMAGE:-ghcr.io/open-webui/open-webui:main}
+    profiles: ["openwebui"]
+    depends_on:
+      - sas
+    ports:
+      - "127.0.0.1:3000:8080"
+    environment:
+      # OpenWebUI croit parler à un backend OpenAI ; en réalité, il parle au
+      # sas via le réseau Docker interne. Aucune clé requise par le sas.
+      OPENAI_API_BASE_URL: "http://sas:8787/v1"
+      OPENAI_API_KEY: "sas-no-key-required"
+    volumes:
+      - openwebui:/app/backend/data
+
 volumes:
   donnees:
   ollama:
+  openwebui:

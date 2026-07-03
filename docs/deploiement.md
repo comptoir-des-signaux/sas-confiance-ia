@@ -107,10 +107,22 @@ le bloc `sas_confiance_ia` indique `integrite.action: ok`. Côté Ollama,
 
 ## 3. OpenWebUI pointé sur le sas (REQ-013)
 
-Dans OpenWebUI : Paramètres > Connexions > ajouter une connexion de type
-OpenAI avec pour base URL `http://<hôte-du-sas>:8787/v1` (aucune clé
-requise par défaut). Les modèles de `SAS_MODELES` apparaissent ; toute
-conversation passe alors par le sas.
+Le plus simple : le profil `openwebui` du compose, qui lance OpenWebUI
+préconfiguré sur le sas via le réseau Docker interne.
+
+```bash
+docker compose --profile ollama --profile openwebui up --build -d
+# OpenWebUI : http://127.0.0.1:3000/  (premier compte créé = admin)
+```
+
+Pour une instance OpenWebUI existante : Paramètres > Connexions > ajouter
+une connexion de type OpenAI avec pour base URL
+`http://<hôte-du-sas>:8787/v1` (aucune clé requise par défaut). Les modèles
+de `SAS_MODELES` apparaissent ; toute conversation passe alors par le sas.
+
+OpenWebUI demande du streaming par défaut : le sas convertit la requête en
+non-streaming (REQ-010) et la réponse s'affiche d'un bloc en fin de
+génération. C'est le comportement attendu, pas une panne.
 
 ## 4. Backends cloud : la même abstraction, zéro code spécifique
 
