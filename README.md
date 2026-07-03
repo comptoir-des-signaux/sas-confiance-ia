@@ -81,13 +81,20 @@ document et sa version pseudonymisée côte à côte avec surlignage, et
 exporte en .txt ou .docx reconstruit.
 **Lot 16 (publication du commun)** : site de documentation MkDocs Material
 publié par GitHub Pages ([tutoriel d'installation](docs/tutoriel-installation.md),
-[parcours formateur](docs/parcours-formateur.md), cadrage complet rendu
-public par transparence), [CONTRIBUTING](CONTRIBUTING.md),
+[parcours formateur](docs/parcours-formateur.md), cadrage rendu public par
+transparence), [CONTRIBUTING](CONTRIBUTING.md),
 [checklist de publication](docs/checklist-publication.md) (REQ-015) avec
 premier scan de secrets de l'historique passé et propre. Une interface de
 chat optionnelle (OpenWebUI, profil Docker Compose dédié) se branche sur le
-sas. Reste avant le push public : contresigner la checklist et activer
-GitHub Pages (Settings > Pages > Source : GitHub Actions).
+sas : la boucle y est entièrement automatique (pseudonymisation à l'aller,
+ré-identification au retour, l'utilisateur ne voit jamais un placeholder).
+La « preuve par le flux » est documentée et testée : demander au modèle de
+réciter sa question avec `X-Reidentify-Response: false`, sa réponse brute
+ne contient que des placeholders. L'interface du sas se lit en deux
+colonnes, à la manière du viewport d'amo-presidio (aller : original puis
+pseudonymisé ; retour : réponse de l'IA puis ré-identifié). Reste :
+contresigner la checklist et activer GitHub Pages (Settings > Pages >
+Source : GitHub Actions).
 
 ## Démarrage (développement)
 
