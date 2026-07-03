@@ -90,6 +90,51 @@ Restitution rapide. Conclure sur la gouvernance : le sas rend le flux
 **vérifiable** (tests de non-fuite, journal sans donnée personnelle), ce
 qui donne au DPO une prise concrète.
 
+## Les deux questions qui reviennent à chaque atelier
+
+### « Avec une interface de chat branchée sur le sas, dois-je copier-coller pour ré-identifier ? »
+
+Non. Quand l'interface de chat (OpenWebUI par exemple) est branchée sur le
+sas, **toute la boucle est automatique et invisible** : le participant tape
+son texte brut, le sas pseudonymise au passage, le modèle ne voit que des
+pseudonymes, et le sas ré-identifie la réponse au retour. Ce qui s'affiche
+dans le chat contient déjà les vraies valeurs. Un seul onglet, zéro
+copier-coller. La règle à faire retenir :
+
+- **IA branchée sur le sas** : tout est automatique.
+- **IA ailleurs** (chat en ligne non relié au sas) : on passe par la page
+  du sas à la main : pseudonymiser (étapes 1 et 2), coller dans l'IA,
+  rapporter sa réponse (étapes 3 et 4).
+
+Piège classique (vécu, donc à montrer) : coller un texte **déjà
+pseudonymisé** dans le chat branché sur le sas. Les placeholders viennent
+d'un autre dossier : le sas, qui ne les connaît pas, refuse par prudence de
+ré-identifier la réponse (un placeholder inconnu est bloquant, REQ-006), et
+la réponse s'affiche avec ses placeholders. C'est un garde-fou, pas une
+panne : la ré-identification se fait alors sur la page du sas, avec le
+dossier d'origine. De même, si le modèle abîme un placeholder au point de
+créer un doute, la ré-identification automatique se bloque et la réponse
+arrive pseudonymisée : la page du sas sert de rattrapage après relecture.
+
+### « À quoi servent les noms factices (surrogates) ? »
+
+Quand le sas trouve « Camille Durand », il a deux masques possibles : le
+placeholder `[PERSONNE_001]` (défaut, jeton robotique impossible à
+confondre avec du vrai texte) ou le surrogate « Camille Roussel » (faux nom
+inventé, cohérent en genre, qui laisse un texte naturel). Dans les deux cas
+le vault sait ce qui se cache derrière et la ré-identification restitue le
+vrai nom.
+
+L'intérêt du surrogate : un modèle rédige mieux sur « Camille Roussel a
+rencontré Paul Berger » que sur « [PERSONNE_001] a rencontré
+[PERSONNE_002] », et il n'abîme pas un nom comme il abîme un jeton. La
+contrepartie (affichée « intégrité réduite » dans l'interface) : si le
+modèle écrit « Mme Roussel », le sas ne peut pas le rattraper, ce bout de
+texte garde le faux nom ; un placeholder altéré, lui, reste reconnaissable
+et se rattrape. Ce n'est jamais une fuite (le nom est inventé), c'est une
+ré-identification incomplète. Message d'atelier : placeholders par défaut,
+surrogates quand la qualité rédactionnelle prime.
+
 ## Points de vigilance pour le formateur
 
 - **Modes démo et sérieux** : la séparation est stricte par conception. Un
