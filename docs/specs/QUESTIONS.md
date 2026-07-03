@@ -158,8 +158,8 @@ PERSONNE uniquement, les autres types gardent leurs placeholders typés.
 l'export PDF caviardé (rectangles noirs façon amo-presidio) exige PyMuPDF,
 licence AGPL, compatible EUPL-1.2 selon la matrice européenne mais
 contaminante pour qui redéploie un sas modifié ; et l'export .docx
-reconstruit doit porter des métadonnées (la ligne rouge « métadonnées
-humaines » interdit les marqueurs de génération automatique).
+reconstruit doit porter des métadonnées propres, sans marqueur de
+génération automatique (exigence REQ-015 sur les fichiers livrés).
 
 **Arbitrage (Pascal Chevallot, 2026-07-03).**
 

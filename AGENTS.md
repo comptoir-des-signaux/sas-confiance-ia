@@ -3,9 +3,9 @@
 Sas de pseudonymisation avant IA pour les collectivites territoriales et la
 fonction publique francaise. Porte par Comptoir des Signaux, licence EUPL-1.2.
 
-Ce document s'adresse a tout agent de code travaillant sur ce projet. Il
-complete le `CLAUDE.md` parent de l'atelier et prime sur les habitudes de
-l'agent. Lire avant d'agir : `docs/specs/06-HANDOFF.md` (consignes strictes),
+Ce document s'adresse a tout agent de code travaillant sur ce projet et
+prime sur les habitudes de l'agent.
+Lire avant d'agir : `docs/specs/06-HANDOFF.md` (consignes strictes),
 `docs/specs/03-SPEC.md` (exigences falsifiables), `docs/specs/05-PLAN.md`
 (plan TDD par lots).
 

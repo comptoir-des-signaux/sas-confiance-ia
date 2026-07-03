@@ -55,8 +55,10 @@ commande ou la vérification indiquée. Une case non cochée bloque le push.
   les exports du sas recopient les propriétés du document source.
 - [ ] Pas de tiret cadratin dans les textes publiés ; français accentué
   partout.
-- [ ] « Comptoir des Signaux », jamais « Le Comptoir des Signaux » ; aucune
-  mention Qualiopi.
+- [ ] « Comptoir des Signaux », jamais « Le Comptoir des Signaux ».
+- [ ] Aucune consigne de travail interne (règles personnelles, chemins de
+  postes de travail, conventions d'agents hors projet) dans les documents
+  publiés : toute exigence citée s'appuie sur le cadrage du dépôt.
 
 ## 5. État du dépôt
 
