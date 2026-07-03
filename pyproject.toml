@@ -17,6 +17,12 @@ dependencies = [
   "httpx2",
   # Surrogates réalistes fr_FR (REQ-012), licence MIT compatible EUPL-1.2.
   "faker>=30",
+  # Fichiers (Lot 15) : python-docx (MIT), pypdf (BSD), multipart FastAPI.
+  # Le PDF caviardé (PyMuPDF, AGPL contaminante) est exclu de la v1 : arbitrage
+  # Q6, docs/specs/QUESTIONS.md.
+  "python-docx>=1.1",
+  "pypdf>=5",
+  "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

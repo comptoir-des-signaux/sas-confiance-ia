@@ -52,6 +52,7 @@ src/sas_confiance_ia/
   backends.py         BackendOpenAICompatible (reel) + BackendCapture (faux, pour les tests)
   configuration.py    Configuration par variables d'environnement
   validators.py       Validateurs francais purs : NIR (cle, Corse 2A/2B), Luhn (SIREN/SIRET), IBAN
+  fichiers.py         Extraction .txt/.md/.csv/.docx/.pdf textuel, refus documente des PDF scannes
   journal.py          Journal structure sans DCP (metadonnees techniques uniquement)
   ui.py               Interface web minimale (copier-coller, modes serieux/demo)
   evaluation.py       Evaluation du rappel NER sur corpus synthetique
