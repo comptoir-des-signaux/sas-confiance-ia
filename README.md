@@ -79,7 +79,15 @@ réversibles par le vault (REQ-012, arbitrage Q5). La page Fichiers accepte
 le glisser-déposer (.txt, .md, .csv, .docx, .pdf textuel), affiche le
 document et sa version pseudonymisée côte à côte avec surlignage, et
 exporte en .txt ou .docx reconstruit.
-Prochain lot : publication du commun.
+**Lot 16 (publication du commun)** : site de documentation MkDocs Material
+publié par GitHub Pages ([tutoriel d'installation](docs/tutoriel-installation.md),
+[parcours formateur](docs/parcours-formateur.md), cadrage complet rendu
+public par transparence), [CONTRIBUTING](CONTRIBUTING.md),
+[checklist de publication](docs/checklist-publication.md) (REQ-015) avec
+premier scan de secrets de l'historique passé et propre. Une interface de
+chat optionnelle (OpenWebUI, profil Docker Compose dédié) se branche sur le
+sas. Reste avant le push public : contresigner la checklist et activer
+GitHub Pages (Settings > Pages > Source : GitHub Actions).
 
 ## Démarrage (développement)
 
