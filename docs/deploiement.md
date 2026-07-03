@@ -30,6 +30,50 @@ SAS_BACKEND_BASE_URL=http://localhost:11434/v1 SAS_MODELES=mistral-small:24b \
   uv run python -m sas_confiance_ia
 ```
 
+## 1 bis. Lancer, arrêter, mettre à jour le conteneur
+
+Toutes les commandes se lancent depuis la racine du dépôt (là où vit
+`docker-compose.yml`).
+
+```bash
+# Lancer (sas seul, backend externe à définir) :
+SAS_BACKEND_BASE_URL=... SAS_MODELES=... docker compose up -d
+
+# Lancer avec le service Ollama local (GPU NVIDIA) :
+docker compose --profile ollama up -d
+
+# État et journaux :
+docker compose ps
+docker compose logs -f sas          # Ctrl+C pour quitter le suivi
+
+# Arrêter (les conteneurs s'arrêtent, volumes et images conservés) :
+docker compose stop sas             # le sas seul
+docker compose --profile ollama stop  # sas + Ollama
+
+# Redémarrer sans changement de code :
+docker compose start sas
+
+# Mettre à jour après un changement de code (reconstruit l'image puis
+# remplace le conteneur ; Ollama n'est pas touché) :
+docker compose up -d --build sas
+```
+
+Points d'attention :
+
+- **Vault en mémoire par défaut** : sans `SAS_VAULT_CHEMIN` + `SAS_VAULT_CLE`,
+  arrêter ou remplacer le conteneur perd toutes les correspondances (les
+  placeholders déjà distribués ne seront plus ré-identifiables). Pour
+  persister : §5.
+- `docker compose down` supprime les conteneurs (volumes conservés) ;
+  `docker compose down --volumes` supprime AUSSI le volume `donnees`, donc
+  un vault persistant qui s'y trouverait : geste volontaire uniquement.
+- La reconstruction (`--build`) réinstalle les dépendances et retélécharge
+  le modèle NER épinglé : plusieurs minutes et du réseau au BUILD (jamais au
+  runtime, HANDOFF règle 1). Le conteneur en cours continue de servir
+  jusqu'à la bascule.
+- Vérification après bascule : `curl http://127.0.0.1:8787/health` puis un
+  tour sur `http://127.0.0.1:8787/` et `http://127.0.0.1:8787/fichiers`.
+
 ## 2. Test d'intégration manuel (checklist)
 
 Toutes les valeurs ci-dessous sont synthétiques (corpus du dépôt). À

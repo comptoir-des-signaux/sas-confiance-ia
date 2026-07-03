@@ -39,6 +39,10 @@ services:
       SAS_JUGE_BASE_URL: ${SAS_JUGE_BASE_URL:-}
       SAS_JUGE_MODELE: ${SAS_JUGE_MODELE:-}
       SAS_JUGE_SCORE_MIN: ${SAS_JUGE_SCORE_MIN:-}
+      # Politiques par type (Lot 14, cadrage 9.5) : « TYPE=action,... »,
+      # actions pseudonymiser / masquer / conserver / revue. Une action ou
+      # un type inconnu refuse le démarrage.
+      SAS_POLITIQUES: ${SAS_POLITIQUES:-}
     volumes:
       - donnees:/donnees
 
