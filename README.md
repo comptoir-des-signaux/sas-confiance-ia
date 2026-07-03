@@ -66,7 +66,7 @@ coller un texte, pseudonymiser, ré-identifier ; le mode sérieux n'affiche
 jamais les valeurs détectées (types, positions et comptes seulement), le mode
 démonstration (bandeau distinct, données synthétiques) refuse de s'activer si
 des dossiers sérieux sont actifs dans l'instance. Phase 1 complète.
-**Phase 2 en cours (lots 13, 13 bis et 14 livrés)** : un juge LLM local
+**Phase 2 en cours (lots 13 à 15 livrés)** : un juge LLM local
 optionnel (REQ-014) relit le texte déjà pseudonymisé et signale les
 identifiants indirects (fonction rare, petite commune, surnom, périphrase)
 pour revue humaine, jamais en remplacement automatique ; couverture
@@ -75,8 +75,11 @@ type d'entité suit désormais une politique configurable par dossier
 (pseudonymiser, masquer sans coffre, conserver, revue : cadrage §9.5), la
 date de naissance est distinguée des dates procédurales (REQ-008) et les
 personnes peuvent recevoir des surrogates réalistes cohérents en genre,
-réversibles par le vault (REQ-012, arbitrage Q5).
-Prochains lots : fichiers, publication.
+réversibles par le vault (REQ-012, arbitrage Q5). La page Fichiers accepte
+le glisser-déposer (.txt, .md, .csv, .docx, .pdf textuel), affiche le
+document et sa version pseudonymisée côte à côte avec surlignage, et
+exporte en .txt ou .docx reconstruit.
+Prochain lot : publication du commun.
 
 ## Démarrage (développement)
 
