@@ -13,12 +13,18 @@ Séparation démo / sérieux (REQ-007, 02-AI-SPEC §5) :
 """
 
 import uuid
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from .fichiers import (
+    ErreurFichier,
+    FormatNonSupporte,
+    extraire_texte,
+    pseudonymiser_docx,
+)
 from .journal import Journal
 from .juge import JugeLLM, executer_passe
 from .politique import valider_actions
@@ -53,9 +59,9 @@ def creer_routeur_ui(
     def accueil() -> str:
         return PAGE_HTML
 
-    @routeur.post("/ui/pseudonymiser")
-    def ui_pseudonymiser(requete: RequetePseudonymisationUI) -> dict[str, Any]:
-        if requete.mode == "demo":
+    def _verifier_mode(dossier_id: str, mode: str) -> None:
+        """Séparation démo / sérieux (REQ-007), commune à tous les chemins UI."""
+        if mode == "demo":
             if vault.un_dossier_serieux_existe():
                 raise HTTPException(
                     status_code=409,
@@ -63,15 +69,89 @@ def creer_routeur_ui(
                     "sérieux a déjà des dossiers actifs dans cette instance "
                     "(séparation REQ-007). Utiliser une instance dédiée à la démo.",
                 )
-            vault.marquer_dossier(requete.dossier_id, "demo")
+            vault.marquer_dossier(dossier_id, "demo")
         else:
-            if vault.mode_dossier(requete.dossier_id) == "demo":
+            if vault.mode_dossier(dossier_id) == "demo":
                 raise HTTPException(
                     status_code=409,
                     detail="Ce dossier a été utilisé en mode démonstration : il ne "
                     "peut plus servir en mode sérieux (séparation REQ-007).",
                 )
-            vault.marquer_dossier(requete.dossier_id, "serieux")
+            vault.marquer_dossier(dossier_id, "serieux")
+
+    def _pseudonymisation_ui(
+        texte: str, dossier_id: str, mode: str, statut: str
+    ) -> dict[str, Any]:
+        """Pseudonymisation + passe juge + journal + détections (Q3).
+
+        En mode sérieux, la réponse expose types, positions, scores et
+        comptes, jamais les valeurs détectées ni le vault.
+        """
+        requete_id = str(uuid.uuid4())
+        resultat = pseudonymiseur.pseudonymiser(texte, dossier_id=dossier_id)
+        # Passe juge (C3, REQ-014) sur le texte déjà pseudonymisé, renvoyée
+        # en positions dans ce même texte (Q3) ; segment et justification en
+        # mode démonstration seulement. Candidats en revue, jamais remplacés.
+        bloc_juge = executer_passe(
+            juge,
+            resultat.texte,
+            texte_reference=resultat.texte,
+            journal=journal,
+            requete_id=requete_id,
+            dossier_id=dossier_id,
+            avec_details=mode == "demo",
+        )
+        # Journal en métadonnées seules (REQ-003), corrélé à l'éventuel
+        # échec du juge par le même requete_id.
+        journal.enregistrer(
+            requete_id=requete_id,
+            dossier_id=dossier_id,
+            backend="ui",
+            modele="",
+            statut=statut,
+            entites_par_type=resultat.comptes_par_type,
+            taille_approx=len(texte),
+            juge_statut=(
+                None
+                if juge is None
+                else ("erreur" if "erreur_type" in bloc_juge else "ok")
+            ),
+            candidats_juge=(
+                len(bloc_juge["candidats"])
+                if juge is not None and "erreur_type" not in bloc_juge
+                else None
+            ),
+        )
+        detections: list[dict[str, Any]] = []
+        for remplacement in resultat.remplacements:
+            entite = remplacement.entite
+            detection: dict[str, Any] = {
+                "type": entite.type,
+                "debut": entite.debut,
+                "fin": entite.fin,
+                "score": entite.score,
+            }
+            if mode == "demo":
+                detection["valeur"] = entite.valeur
+                detection["placeholder"] = remplacement.placeholder
+                if remplacement.surrogate is not None:
+                    detection["surrogate"] = remplacement.surrogate
+            detections.append(detection)
+        return {
+            "mode": mode,
+            "texte": resultat.texte,
+            "comptes_par_type": resultat.comptes_par_type,
+            "detections": detections,
+            "ambiguites_coreference": resultat.ambiguites,
+            # Placeholders masqués par une politique « revue » (Lot 14) : à
+            # faire relire par un humain, jamais de valeur.
+            "entites_en_revue": resultat.en_revue,
+            "juge": bloc_juge,
+        }
+
+    @routeur.post("/ui/pseudonymiser")
+    def ui_pseudonymiser(requete: RequetePseudonymisationUI) -> dict[str, Any]:
+        _verifier_mode(requete.dossier_id, requete.mode)
 
         if requete.politiques is not None or requete.surrogates is not None:
             if requete.politiques is not None:
@@ -100,69 +180,73 @@ def creer_routeur_ui(
                 },
             )
 
-        requete_id = str(uuid.uuid4())
-        resultat = pseudonymiseur.pseudonymiser(requete.texte, dossier_id=requete.dossier_id)
-        # Passe juge (C3, REQ-014) sur le texte déjà pseudonymisé, renvoyée
-        # en positions dans ce même texte (Q3 : le client extrait lui-même,
-        # aucun segment en clair en mode sérieux ; le mode démo, valeurs
-        # assumées visibles, reçoit segment et justification). Les candidats
-        # partent en revue, jamais en remplacement.
-        bloc_juge = executer_passe(
-            juge,
-            resultat.texte,
-            texte_reference=resultat.texte,
-            journal=journal,
-            requete_id=requete_id,
-            dossier_id=requete.dossier_id,
-            avec_details=requete.mode == "demo",
+        return _pseudonymisation_ui(
+            requete.texte, requete.dossier_id, requete.mode, "pseudonymisation_ui"
         )
-        # Journal en métadonnées seules (REQ-003), corrélé à l'éventuel
-        # échec du juge par le même requete_id.
+
+    @routeur.post("/ui/fichier")
+    async def ui_fichier(
+        fichier: Annotated[UploadFile, File()],
+        dossier_id: Annotated[str, Form()],
+        mode: Annotated[Literal["serieux", "demo"], Form()] = "serieux",
+    ) -> dict[str, Any]:
+        octets = await fichier.read()
+        nom = fichier.filename or ""
+        try:
+            texte = extraire_texte(nom, octets)
+        except FormatNonSupporte as erreur:
+            raise HTTPException(status_code=415, detail=str(erreur)) from erreur
+        except ErreurFichier as erreur:
+            # PDF scanné ou fichier corrompu : refus explicite, le dossier
+            # n'est pas marqué pour un dépôt qui n'a rien produit.
+            raise HTTPException(status_code=422, detail=str(erreur)) from erreur
+        _verifier_mode(dossier_id, mode)
+        reponse = _pseudonymisation_ui(texte, dossier_id, mode, "pseudonymisation_fichier_ui")
+        # Q3 : le texte extrait revient au navigateur, c'est le document de
+        # l'utilisateur ; le nom du fichier revient aussi mais n'entre
+        # JAMAIS au journal (REQ-003 : il peut contenir un nom de personne).
+        return {"nom": nom, "texte_origine": texte, **reponse}
+
+    @routeur.post("/ui/fichier/export-docx")
+    async def ui_fichier_export_docx(
+        fichier: Annotated[UploadFile, File()],
+        dossier_id: Annotated[str, Form()],
+        mode: Annotated[Literal["serieux", "demo"], Form()] = "serieux",
+    ) -> Response:
+        nom = fichier.filename or ""
+        if not nom.lower().endswith(".docx"):
+            raise HTTPException(
+                status_code=415,
+                detail="l'export reconstruit ne concerne que les fichiers .docx ; "
+                "pour un texte brut, le téléchargement se fait côté navigateur",
+            )
+        octets = await fichier.read()
+        _verifier_mode(dossier_id, mode)
+        try:
+            exporte, comptes = pseudonymiser_docx(
+                octets,
+                lambda texte: pseudonymiseur.pseudonymiser(texte, dossier_id=dossier_id),
+            )
+        except ErreurFichier as erreur:
+            raise HTTPException(status_code=422, detail=str(erreur)) from erreur
         journal.enregistrer(
-            requete_id=requete_id,
-            dossier_id=requete.dossier_id,
+            requete_id=str(uuid.uuid4()),
+            dossier_id=dossier_id,
             backend="ui",
             modele="",
-            statut="pseudonymisation_ui",
-            entites_par_type=resultat.comptes_par_type,
-            taille_approx=len(requete.texte),
-            juge_statut=(
-                None
-                if juge is None
-                else ("erreur" if "erreur_type" in bloc_juge else "ok")
-            ),
-            candidats_juge=(
-                len(bloc_juge["candidats"])
-                if juge is not None and "erreur_type" not in bloc_juge
-                else None
-            ),
+            statut="export_docx_ui",
+            entites_par_type=comptes,
+            taille_approx=len(octets),
         )
-        detections: list[dict[str, Any]] = []
-        for remplacement in resultat.remplacements:
-            entite = remplacement.entite
-            detection: dict[str, Any] = {
-                "type": entite.type,
-                "debut": entite.debut,
-                "fin": entite.fin,
-                "score": entite.score,
-            }
-            if requete.mode == "demo":
-                detection["valeur"] = entite.valeur
-                detection["placeholder"] = remplacement.placeholder
-                if remplacement.surrogate is not None:
-                    detection["surrogate"] = remplacement.surrogate
-            detections.append(detection)
-        return {
-            "mode": requete.mode,
-            "texte": resultat.texte,
-            "comptes_par_type": resultat.comptes_par_type,
-            "detections": detections,
-            "ambiguites_coreference": resultat.ambiguites,
-            # Placeholders masqués par une politique « revue » (Lot 14) : à
-            # faire relire par un humain, jamais de valeur.
-            "entites_en_revue": resultat.en_revue,
-            "juge": bloc_juge,
-        }
+        return Response(
+            content=exporte,
+            media_type=(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ),
+            # Nom neutre : le nom d'origine peut porter un nom de personne,
+            # la page renomme le téléchargement côté client si besoin.
+            headers={"Content-Disposition": 'attachment; filename="pseudonymise.docx"'},
+        )
 
     @routeur.post("/ui/reidentifier")
     def ui_reidentifier(requete: RequeteReidentificationUI) -> dict[str, str]:

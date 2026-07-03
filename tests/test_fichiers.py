@@ -31,7 +31,8 @@ def docx_fictif() -> bytes:
     document.add_paragraph("Agent : Karim Benhaddou.")
     table = document.add_table(rows=2, cols=2)
     table.cell(0, 0).text = "NIR"
-    table.cell(0, 1).text = "1 79 03 26 121 044 87"
+    # Clé valide : le PV du corpus utilise exprès des clés invalides (Q4).
+    table.cell(0, 1).text = "2 92 07 82 045 033 55"
     table.cell(1, 0).text = "Courriel"
     table.cell(1, 1).text = "k.benhaddou@exemple-fictif.fr"
     tampon = io.BytesIO()
@@ -98,7 +99,7 @@ def test_docx_paragraphes_et_tableaux_sont_extraits():
     assert "Conseil medical fictif du 11 juin 2026." in texte
     assert "Agent : Karim Benhaddou." in texte
     # Les tableaux ne sont jamais perdus : c'est là que vivent les NIR.
-    assert "1 79 03 26 121 044 87" in texte
+    assert "2 92 07 82 045 033 55" in texte
     assert "k.benhaddou@exemple-fictif.fr" in texte
 
 
