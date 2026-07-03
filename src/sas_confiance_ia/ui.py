@@ -59,6 +59,10 @@ def creer_routeur_ui(
     def accueil() -> str:
         return PAGE_HTML
 
+    @routeur.get("/fichiers", response_class=HTMLResponse)
+    def page_fichiers() -> str:
+        return PAGE_FICHIERS_HTML
+
     def _verifier_mode(dossier_id: str, mode: str) -> None:
         """Séparation démo / sérieux (REQ-007), commune à tous les chemins UI."""
         if mode == "demo":
@@ -273,13 +277,7 @@ def creer_routeur_ui(
     return routeur
 
 
-PAGE_HTML = """<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sas Confiance IA : sas de pseudonymisation avant IA</title>
-<style>
+STYLE_COMMUN = """<style>
   /* Palette Comptoir des Signaux (https://www.comptoirdessignaux.com) :
      bleu à-plat principal, jaune or de mise en valeur, bleu du texte. */
   :root { --encre: #182C49; --fond: #f5f4f0; --accent: #1F519B;
@@ -290,6 +288,7 @@ PAGE_HTML = """<!DOCTYPE html>
   header { padding: 1.2rem 2rem; border-bottom: 3px solid var(--accent); }
   header h1 { margin: 0; font-size: 1.4rem; }
   header p { margin: .2rem 0 0; color: #555; font-size: .95rem; }
+  header nav { margin-top: .4rem; font-size: .95rem; }
   main { max-width: 60rem; margin: 0 auto; padding: 1.5rem 2rem; }
   label { display: block; font-weight: bold; margin: .8rem 0 .3rem; }
   textarea { width: 100%; min-height: 10rem; padding: .7rem;
@@ -316,7 +315,18 @@ PAGE_HTML = """<!DOCTYPE html>
   th { background: var(--or); }
   footer { padding: 1rem 2rem 2rem; color: #666; font-size: .85rem;
            max-width: 60rem; margin: 0 auto; }
-</style>
+</style>"""
+
+PAGE_HTML = (
+    """<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sas Confiance IA : sas de pseudonymisation avant IA</title>
+"""
+    + STYLE_COMMUN
+    + """
 </head>
 <body>
 <header>
@@ -324,6 +334,7 @@ PAGE_HTML = """<!DOCTYPE html>
   <p>Sas de pseudonymisation avant IA : les valeurs sensibles restent en zone
      de confiance. Aucun détecteur n'atteint 100 % de rappel : relisez avant
      d'envoyer à un modèle.</p>
+  <nav><a href="/fichiers">Fichiers : déposer un document (.txt, .md, .docx, .pdf)</a></nav>
 </header>
 <main>
   <div id="bandeau-demo">MODE DÉMONSTRATION : valeurs visibles, à réserver aux
@@ -536,3 +547,224 @@ el("telecharger").addEventListener("click", () => {
 </body>
 </html>
 """
+)
+
+PAGE_FICHIERS_HTML = (
+    """<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sas Confiance IA : fichiers</title>
+"""
+    + STYLE_COMMUN
+    + """
+<style>
+  #zone-depot { margin-top: 1rem; padding: 2rem; border: 2px dashed var(--accent);
+                border-radius: 6px; text-align: center; background: #fff;
+                cursor: pointer; }
+  #zone-depot.survol { background: #eef3fb; border-style: solid; }
+  #nom-fichier { font-weight: bold; }
+  .pastille { display: inline-block; margin: .2rem .3rem 0 0; padding: .2rem .6rem;
+              background: var(--or); border-radius: 999px; font-size: .85rem; }
+  .cote-a-cote { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+                 margin-top: .5rem; }
+  .panneau { background: #fff; border: 1px solid #b9b4a8; border-radius: 4px;
+             padding: .7rem; font: .9rem/1.5 "DejaVu Sans Mono", monospace;
+             white-space: pre-wrap; overflow-x: auto; max-height: 28rem;
+             overflow-y: auto; }
+  .panneau mark { background: var(--or); border-radius: 2px; }
+  @media (max-width: 50rem) { .cote-a-cote { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sas Confiance IA : fichiers</h1>
+  <p>Déposer un document (.txt, .md, .csv, .docx, .pdf textuel) : le texte est
+     extrait puis pseudonymisé. Les PDF scannés sont refusés (pas d'OCR).
+     Aucun détecteur n'atteint 100 % de rappel : relisez avant d'envoyer.</p>
+  <nav><a href="/">Texte : coller et pseudonymiser</a></nav>
+</header>
+<main>
+  <div id="bandeau-demo">MODE DÉMONSTRATION : valeurs visibles, à réserver aux
+    données synthétiques. Ne jamais y coller de vraies données.</div>
+
+  <div id="zone-depot">Glisser-déposer un fichier ici, ou cliquer pour choisir.
+    <div id="nom-fichier">Aucun fichier choisi.</div>
+    <input type="file" id="selecteur" accept=".txt,.md,.csv,.docx,.pdf" hidden>
+  </div>
+
+  <div class="ligne">
+    <div>
+      <label for="dossier">Dossier</label>
+      <input id="dossier" value="dossier-001">
+    </div>
+    <div>
+      <label for="mode">Mode</label>
+      <select id="mode">
+        <option value="serieux" selected>Sérieux (aucune valeur affichée)</option>
+        <option value="demo">Démonstration (valeurs visibles)</option>
+      </select>
+    </div>
+    <button id="pseudonymiser" disabled>Pseudonymiser le fichier</button>
+  </div>
+
+  <div id="erreur"></div>
+
+  <section class="resultat" id="resultat">
+    <div id="pastilles"></div>
+    <div class="cote-a-cote">
+      <div>
+        <label>Document d'origine (entités surlignées)</label>
+        <div id="origine" class="panneau"></div>
+      </div>
+      <div>
+        <label>Texte pseudonymisé (à copier vers votre IA)</label>
+        <div id="pseudo" class="panneau"></div>
+      </div>
+    </div>
+    <div class="ligne" style="margin-top: 1rem;">
+      <button id="export-txt" class="secondaire">Télécharger le .txt pseudonymisé</button>
+      <button id="export-docx" class="secondaire" disabled>Télécharger le .docx
+        pseudonymisé</button>
+    </div>
+    <div id="synthese"></div>
+  </section>
+</main>
+<footer>
+  Le document déposé est traité dans cette instance et n'en sort que
+  pseudonymisé. Le surlignage se calcule dans votre navigateur à partir des
+  positions : en mode sérieux, le serveur ne renvoie jamais les valeurs
+  détectées. Un commun numérique porté par
+  <a href="https://www.comptoirdessignaux.com">Comptoir des Signaux</a>.
+</footer>
+<script>
+const el = (id) => document.getElementById(id);
+let fichierCourant = null;
+let corpsCourant = null;
+
+function echapper(texte) {
+  const div = document.createElement("div");
+  div.textContent = String(texte);
+  return div.innerHTML;
+}
+
+el("dossier").value = "dossier-" + crypto.randomUUID().slice(0, 13);
+
+el("mode").addEventListener("change", () => {
+  document.body.classList.toggle("demo-actif", el("mode").value === "demo");
+});
+
+function montrerErreur(message) {
+  el("erreur").textContent = message;
+  el("erreur").style.display = message ? "block" : "none";
+}
+
+const zone = el("zone-depot");
+zone.addEventListener("click", () => el("selecteur").click());
+zone.addEventListener("dragover", (evenement) => {
+  evenement.preventDefault();
+  zone.classList.add("survol");
+});
+zone.addEventListener("dragleave", () => zone.classList.remove("survol"));
+zone.addEventListener("drop", (evenement) => {
+  evenement.preventDefault();
+  zone.classList.remove("survol");
+  if (evenement.dataTransfer.files.length) choisir(evenement.dataTransfer.files[0]);
+});
+el("selecteur").addEventListener("change", () => {
+  if (el("selecteur").files.length) choisir(el("selecteur").files[0]);
+});
+
+function choisir(fichier) {
+  fichierCourant = fichier;
+  el("nom-fichier").textContent = fichier.name;
+  el("pseudonymiser").disabled = false;
+}
+
+el("pseudonymiser").addEventListener("click", async () => {
+  montrerErreur("");
+  const donnees = new FormData();
+  donnees.append("fichier", fichierCourant);
+  donnees.append("dossier_id", el("dossier").value);
+  donnees.append("mode", el("mode").value);
+  try {
+    const reponse = await fetch("/ui/fichier", { method: "POST", body: donnees });
+    const corps = await reponse.json();
+    if (!reponse.ok) throw new Error(corps.detail || "Erreur inattendue.");
+    afficher(corps);
+  } catch (erreur) { montrerErreur(erreur.message); }
+});
+
+// Surlignage côté client à partir des positions (arbitrage Q3) : le texte
+// appartient à l'utilisateur, le serveur n'a renvoyé que des positions.
+function surligner(texte, detections) {
+  const triees = [...detections].sort((a, b) => a.debut - b.debut);
+  let html = "";
+  let curseur = 0;
+  for (const detection of triees) {
+    if (detection.debut < curseur) continue;
+    html += echapper(texte.slice(curseur, detection.debut));
+    html += `<mark title="${echapper(detection.type)}">`
+      + echapper(texte.slice(detection.debut, detection.fin)) + "</mark>";
+    curseur = detection.fin;
+  }
+  return html + echapper(texte.slice(curseur));
+}
+
+function afficher(corps) {
+  corpsCourant = corps;
+  el("resultat").style.display = "block";
+  el("origine").innerHTML = surligner(corps.texte_origine, corps.detections);
+  el("pseudo").textContent = corps.texte;
+  el("pastilles").innerHTML = Object.entries(corps.comptes_par_type)
+    .map(([type, compte]) =>
+      `<span class="pastille">${echapper(type)} : ${echapper(compte)}</span>`)
+    .join("");
+  el("export-docx").disabled = !fichierCourant.name.toLowerCase().endsWith(".docx");
+  let html = "";
+  if (corps.entites_en_revue && corps.entites_en_revue.length) {
+    html += `<p>Masqués par prudence, à faire relire (politique « revue ») :
+      ${corps.entites_en_revue.map(echapper).join(", ")}</p>`;
+  }
+  if (corps.ambiguites_coreference && corps.ambiguites_coreference.length) {
+    html += `<p>Rattachements à vérifier (homonymes possibles) :
+      ${corps.ambiguites_coreference.map(echapper).join(", ")}</p>`;
+  }
+  el("synthese").innerHTML = html;
+}
+
+el("export-txt").addEventListener("click", () => {
+  const blob = new Blob([corpsCourant.texte], { type: "text/plain" });
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(blob);
+  lien.download = `pseudonymise-${fichierCourant.name.replace(/\\.[^.]+$/, "")}.txt`;
+  lien.click();
+  URL.revokeObjectURL(lien.href);
+});
+
+el("export-docx").addEventListener("click", async () => {
+  montrerErreur("");
+  const donnees = new FormData();
+  donnees.append("fichier", fichierCourant);
+  donnees.append("dossier_id", el("dossier").value);
+  donnees.append("mode", el("mode").value);
+  try {
+    const reponse = await fetch("/ui/fichier/export-docx", { method: "POST", body: donnees });
+    if (!reponse.ok) {
+      const corps = await reponse.json();
+      throw new Error(corps.detail || "Erreur inattendue.");
+    }
+    const blob = await reponse.blob();
+    const lien = document.createElement("a");
+    lien.href = URL.createObjectURL(blob);
+    lien.download = `pseudonymise-${fichierCourant.name}`;
+    lien.click();
+    URL.revokeObjectURL(lien.href);
+  } catch (erreur) { montrerErreur(erreur.message); }
+});
+</script>
+</body>
+</html>
+"""
+)

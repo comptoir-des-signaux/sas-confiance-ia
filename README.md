@@ -165,6 +165,24 @@ Roussel ») n'est ni restauré ni détecté, là où un placeholder altéré est
 rattrapé par la lecture tolérante. Le mode placeholder reste le défaut.
 Portée v1 : personnes uniquement.
 
+### Fichiers : déposer, comparer, exporter
+
+La page `/fichiers` accepte le glisser-déposer de documents `.txt`, `.md`,
+`.csv`, `.docx` (paragraphes et tableaux) et `.pdf` textuels. Le texte
+extrait s'affiche côte à côte avec le texte pseudonymisé, entités
+surlignées : le surlignage se calcule dans le navigateur à partir des
+positions (arbitrage Q3), le serveur ne renvoie jamais les valeurs en mode
+sérieux. Exports : `.txt` pseudonymisé, et `.docx` reconstruit (mêmes
+placeholders que l'analyse, propriétés du document source recopiées et
+passées elles aussi à la détection).
+
+Refus explicites : PDF scanné (pas d'OCR en v1 : pseudonymiser une image en
+la laissant lisible serait un faux sentiment de sécurité) et formats non
+supportés. Le nom du fichier déposé n'entre jamais au journal (il peut
+contenir un nom de personne, REQ-003). Le PDF caviardé (PyMuPDF, licence
+AGPL contaminante) est exclu de la v1 : arbitrage Q6,
+[`docs/specs/QUESTIONS.md`](docs/specs/QUESTIONS.md).
+
 **Dates différenciées (REQ-008).** La date de naissance (« née le 12 mai
 1985 », « Date de naissance : 28/09/1986 ») est masquée par défaut. Les
 dates procédurales (décision, séance, accident) sont détectées, comptées et

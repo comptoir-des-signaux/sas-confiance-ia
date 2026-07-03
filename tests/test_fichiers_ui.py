@@ -186,3 +186,22 @@ def test_l_export_refuse_tout_sauf_docx(client):
     reponse = exporter(client, "note.txt", b"du texte")
     assert reponse.status_code == 415
     assert "docx" in reponse.json()["detail"]
+
+
+# --- Page Fichiers -------------------------------------------------------------
+
+
+def test_la_page_fichiers_est_servie(client):
+    reponse = client.get("/fichiers")
+    assert reponse.status_code == 200
+    assert "text/html" in reponse.headers["content-type"]
+    page = reponse.text
+    assert "déposer" in page.lower() or "glisser" in page.lower()
+    # Côte à côte origine / pseudonymisé, surlignage côté client (Q3).
+    assert "cote-a-cote" in page
+    assert "surligner" in page
+
+
+def test_l_accueil_et_la_page_fichiers_se_referencent(client):
+    assert '"/fichiers"' in client.get("/").text
+    assert 'href="/"' in client.get("/fichiers").text

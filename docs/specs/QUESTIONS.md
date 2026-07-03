@@ -151,3 +151,30 @@ surrogate n'entre jamais en collision avec un nom déjà connu du dossier
 (réel ou factice), mais une pièce ultérieure du dossier peut, en théorie,
 contenir naturellement le nom tiré : risque résiduel assumé. Portée v1 :
 PERSONNE uniquement, les autres types gardent leurs placeholders typés.
+
+## Q6 : fichiers, PDF caviardé et métadonnées des exports (Lot 15)
+
+**Constat (2026-07-03, Lot 15).** Deux points laissés ouverts par le plan :
+l'export PDF caviardé (rectangles noirs façon amo-presidio) exige PyMuPDF,
+licence AGPL, compatible EUPL-1.2 selon la matrice européenne mais
+contaminante pour qui redéploie un sas modifié ; et l'export .docx
+reconstruit doit porter des métadonnées (la ligne rouge « métadonnées
+humaines » interdit les marqueurs de génération automatique).
+
+**Arbitrage (Pascal Chevallot, 2026-07-03).**
+
+- **PDF caviardé exclu de la v1** : le commun reste entièrement
+  MIT/BSD/EUPL, sans clause contaminante à expliquer aux DSI. Le besoin est
+  couvert par les exports .txt et .docx pseudonymisés ; le caviardage PDF
+  est une piste (Phase 3 ou extra optionnel).
+- **Métadonnées des exports .docx : recopiées du document source** (elles
+  appartiennent à l'utilisateur), mais passées ELLES AUSSI à la détection :
+  un nom ou un courriel en propriété (auteur, commentaires) ne fuit pas par
+  la bande.
+
+**Limites documentées.** Un paragraphe modifié perd sa mise en forme fine
+(python-docx remplace ses runs) ; un paragraphe sans détection garde la
+sienne. L'ordre paragraphes puis tableaux de l'extraction ne préserve pas
+l'entrelacement d'origine (l'export .docx, lui, modifie en place). Les PDF
+scannés sont refusés : pas d'OCR en v1. Le nom du fichier déposé revient au
+navigateur mais n'entre jamais au journal (REQ-003).
