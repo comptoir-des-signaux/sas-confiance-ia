@@ -119,6 +119,17 @@ copier-coller. La règle à faire retenir :
   du sas à la main : pseudonymiser (étapes 1 et 2), coller dans l'IA,
   rapporter sa réponse (étapes 3 et 4).
 
+Corollaire qui déroute toujours : **on ne voit jamais de placeholders dans
+le chat**, et c'est le signe que tout fonctionne. Vu du chat, « le sas
+marche parfaitement » et « le sas ne fait rien » se ressemblent trait pour
+trait : d'où l'importance de la preuve par le flux (séquence 2). Variante
+jouable directement dans le chat : demander au modèle de **décrire en
+toutes lettres, sans les recopier**, la forme des noms qu'il voit dans la
+question ; il répond « des jetons du type PERSONNE suivi d'un numéro,
+entre crochets ». Mise en garde : s'il recopie un jeton à l'identique, le
+sas le ré-identifie au passage du retour et la démonstration devient
+confuse ; l'écho en ligne de commande reste la preuve propre.
+
 Piège classique (vécu, donc à montrer) : coller un texte **déjà
 pseudonymisé** dans le chat branché sur le sas. Les placeholders viennent
 d'un autre dossier : le sas, qui ne les connaît pas, refuse par prudence de
