@@ -94,8 +94,24 @@ curl -s -X POST http://127.0.0.1:8787/v1/chat/completions \
   }'
 ```
 
-Le modèle ne voit que des pseudonymes (`docker compose logs ollama` pour le
-constater) ; la réponse vous revient ré-identifiée.
+Le modèle ne voit que des pseudonymes et la réponse vous revient
+ré-identifiée. Pour le constater par vous-même, demandez au modèle de
+réciter sa question, ré-identification désactivée : sa réponse brute ne
+contient que des placeholders.
+
+```bash
+curl -s -X POST http://127.0.0.1:8787/v1/chat/completions \
+  -H "Content-Type: application/json" -H "X-Dossier-Id: essai-002" \
+  -H "X-Reidentify-Response: false" \
+  -d '{
+    "model": "mistral-small:24b",
+    "messages": [{"role": "user", "content": "Recopie exactement ma question : quel dossier suit Marie Martin (marie.martin@exemple.fr) ?"}]
+  }'
+# → "quel dossier suit [PERSONNE_001] ([EMAIL_001]) ?"
+```
+
+(Les journaux d'Ollama ne permettent pas cette vérification : ils ne
+montrent jamais le contenu des prompts, seulement leur provenance.)
 
 ## 5 bis. Sans GPU : backend souverain distant
 

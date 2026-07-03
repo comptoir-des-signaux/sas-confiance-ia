@@ -18,8 +18,10 @@ formation par Comptoir des Signaux, à adapter à votre public.
   même « anonymisé à la main » : c'est précisément le réflexe que l'atelier
   veut déconstruire.
 - Vidéoprojection de deux fenêtres : l'interface du sas
-  (`http://127.0.0.1:8787/`) et un terminal pour les journaux
-  (`docker compose logs -f ollama`).
+  (`http://127.0.0.1:8787/`) et un terminal avec la commande « preuve par
+  le flux » prête à lancer (l'écho ci-dessous, séquence 2). Inutile de
+  projeter les journaux d'Ollama : ils ne montrent jamais le contenu des
+  prompts, seulement leur provenance.
 
 ## Séquence 1 : le problème (15 min)
 
@@ -42,10 +44,21 @@ sérieux). Coller le texte, pseudonymiser, dérouler :
 1. **Ce qui a été détecté** : types, comptes, surlignage. Faire remarquer
    la cohérence : « Jean Dupont » puis « M. Dupont » reçoivent le même
    pseudonyme (coréférence par dossier).
-2. **Ce qui part réellement** : montrer le journal Ollama sur le deuxième
-   écran : le modèle ne voit que `[PERSONNE_001]`, `[EMAIL_001]`. C'est le
-   moment le plus convaincant de l'atelier : la preuve par le flux, pas la
-   promesse d'une brochure.
+2. **Ce qui part réellement** : la zone 2 de l'interface montre le texte
+   qui part vers le modèle. Puis le moment le plus convaincant de
+   l'atelier, la preuve par le flux : demander au modèle **de réciter
+   lui-même sa question**, ré-identification désactivée. Sa réponse brute
+   ne contient que des placeholders : il n'a jamais vu les valeurs, et
+   c'est lui qui en témoigne, pas une brochure.
+
+    ```bash
+    curl -s -X POST http://127.0.0.1:8787/v1/chat/completions \
+      -H "Content-Type: application/json" -H "X-Dossier-Id: atelier-echo" \
+      -H "X-Reidentify-Response: false" \
+      -d '{"model": "mistral-small:24b", "messages": [{"role": "user",
+           "content": "Recopie exactement ma question entre guillemets : quel dossier suit Marie Martin (marie.martin@exemple.fr, 06 12 34 56 78) ?"}]}'
+    # → "quel dossier suit [PERSONNE_001] ([EMAIL_001], [TELEPHONE_001]) ?"
+    ```
 3. **Le retour** : la réponse revient ré-identifiée en zone de confiance.
    Expliquer le vault : la table de correspondance qui ne quitte jamais la
    machine.

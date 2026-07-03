@@ -94,6 +94,9 @@ curl -s -X POST http://127.0.0.1:8787/v1/chat/completions \
 
 # 2.3 Réponse brute pseudonymisée (sans ré-identification)
 #     Ajouter : -H "X-Reidentify-Response: false"
+#     Preuve par le flux : avec ce même en-tête, demander au modèle de
+#     « recopier exactement la question » : sa réponse brute ne contient
+#     que des placeholders, il n'a jamais vu les valeurs.
 # 2.4 Streaming converti (REQ-010) : "stream": true  ->  réponse complète
 #     non streamée (HTTP 200), événement conversion_streaming au journal
 # 2.5 Backend éteint : docker compose stop ollama  ->  HTTP 502
@@ -102,8 +105,11 @@ curl -s -X POST http://127.0.0.1:8787/v1/chat/completions \
 
 Attendu : la réponse 2.2 est ré-identifiée (les valeurs réapparaissent) et
 le bloc `sas_confiance_ia` indique `integrite.action: ok`. Côté Ollama,
-`docker compose logs ollama` ne doit montrer que des placeholders
-(`[PERSONNE_001]`, `[EMAIL_001]`...) dans les prompts reçus.
+`docker compose logs ollama` montre que chaque requête vient du conteneur
+sas (adresse interne Docker), mais **pas le contenu des prompts** : Ollama
+ne journalise pas les corps de requêtes, quel que soit `OLLAMA_DEBUG`
+(vérifié sur 0.31.1). Pour constater ce que le modèle a réellement vu,
+utiliser l'écho du 2.3 : c'est le modèle lui-même qui le récite.
 
 ## 3. OpenWebUI pointé sur le sas (REQ-013)
 
