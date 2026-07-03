@@ -12,7 +12,7 @@ l'agent. Lire avant d'agir : `docs/specs/06-HANDOFF.md` (consignes strictes),
 ## Carte d'architecture (graphify)
 
 Un graphe de connaissances du code est disponible dans `graphify-out/`. Il
-cartographie 586 nuds, 1313 aretes et 25 communautes.
+cartographie 725 nuds, 1557 aretes et 37 communautes (a jour du lot 14).
 
 - **Point d'entree** : `graphify-out/wiki/index.md` (communautes triees par
   taille + 10 nuds centraux avec liens)
@@ -26,8 +26,8 @@ cartographie 586 nuds, 1313 aretes et 25 communautes.
 
 **Avant de modifier un module**, consulter sa communaute dans le wiki pour
 comprendre ses dependances. Les 5 nuds les plus connectes :
-`VaultMemoire` (52), `detecter()` (48), `Pseudonymiseur` (48), `JugeLLM` (37),
-`charger_configuration()` (29).
+`VaultMemoire` (68), `Pseudonymiseur` (58), `detecter()` (52),
+`Vault` (37), `charger_configuration()` (33).
 
 ## Stack
 
