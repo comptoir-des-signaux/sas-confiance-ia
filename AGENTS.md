@@ -111,7 +111,7 @@ affaiblir est une interdiction absolue (voir ci-dessus).
 | 007 | Separation demo / serieux | Mode serieux ne retourne jamais le vault ni les valeurs |
 | 008 | Dates procedurales vs date de naissance | Politique configuree par dossier |
 | 009 | Corpus 100% synthetique | Aucune donnee reelle dans les tests |
-| 010 | Pas de streaming v1 | `stream=true` -> HTTP 400 explicite |
+| 010 | Pas de streaming v1 | `stream=true` -> conversion en `stream=false` journalisee (statut `conversion_streaming`), reponse complete jamais en flux |
 
 ## Ce que l'agent doit signaler au lieu de resoudre seul
 

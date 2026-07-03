@@ -106,7 +106,9 @@ def test_req_001_perimetre_complet_avec_ner(moteur_ner):
     assert not fuites, f"valeurs de l'oracle présentes dans le payload sortant : {fuites}"
 
 
-def test_req_010_stream_est_refuse(client):
+def test_req_010_stream_est_converti(client):
+    # REQ-010 : stream=true est converti en stream=false (alternative
+    # autorisée par la spec) avec journalisation, pas refusé.
     reponse = client.post(
         "/v1/chat/completions",
         json={
@@ -116,8 +118,8 @@ def test_req_010_stream_est_refuse(client):
         },
         headers={"X-Dossier-Id": "dossier-test"},
     )
-    assert reponse.status_code == 400
-    assert "stream" in reponse.json()["detail"].lower()
+    assert reponse.status_code == 200
+    assert "choices" in reponse.json()
 
 
 def test_le_payload_contient_des_placeholders(client, backend):

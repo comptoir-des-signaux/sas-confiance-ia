@@ -47,7 +47,7 @@ des valeurs détectées, désormais au périmètre complet noms / lieux /
 organisations inclus (REQ-001), ré-identification exacte (REQ-002), journaux
 sans donnée personnelle (REQ-003), vault chiffré au repos (REQ-004),
 compteurs persistants (REQ-005), placeholders inconnus bloquants (REQ-006),
-streaming refusé (REQ-010). La détection s'appuie sur le NER français
+streaming converti en non-streaming journalisé (REQ-010). La détection s'appuie sur le NER français
 CamemBERT (modèle épinglé, rappel et précision
 [mesurés et publiés](docs/eval/evaluation-ner.md)) et le proxy parle à tout
 backend OpenAI-compatible par simple configuration (REQ-013) : Ollama local,

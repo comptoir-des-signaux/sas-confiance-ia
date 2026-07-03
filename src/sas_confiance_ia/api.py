@@ -2,7 +2,7 @@
 
 Flux (01-PRD §5) : réception → pseudonymisation → backend → réponse.
 Le contrôle d'intégrité et la ré-identification de la réponse arrivent au
-Lot 7 ; le streaming est refusé (REQ-010).
+Lot 7 ; le streaming est converti en non-streaming journalisé (REQ-010).
 """
 
 import time
@@ -99,18 +99,18 @@ def creer_application(
             )
         vault.marquer_dossier(dossier_id, "serieux")
         if requete.stream:
+            # REQ-010 : le streaming est converti en mode non-streaming
+            # (alternative autorisée par la spec) avec journalisation. Un
+            # placeholder coupé entre deux chunks rend la ré-identification
+            # et le contrôle d'intégrité non fiables : on bufferise.
             journal.enregistrer(
                 requete_id=requete_id,
                 dossier_id=dossier_id,
                 backend=type(backend).__name__,
                 modele=requete.model,
-                statut="refus_streaming",
+                statut="conversion_streaming",
             )
-            raise HTTPException(
-                status_code=400,
-                detail="Le streaming (stream=true) est refusé en v1 : les placeholders "
-                "peuvent être coupés entre deux chunks (REQ-010).",
-            )
+            requete.stream = False
 
         messages_pseudonymises = []
         placeholders_envoyes: set[str] = set()

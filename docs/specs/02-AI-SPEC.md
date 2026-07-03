@@ -96,7 +96,8 @@ changement de modèle juge (F9).
 1. Le vault n'est jamais dans le contexte d'un LLM, local ou distant.
 2. Le juge tourne exclusivement en local ; un test réseau vérifie l'absence
    d'appel sortant pendant sa passe (REQ-014).
-3. `stream=true` refusé (REQ-010).
+3. `stream=true` converti en `stream=false` avec journalisation (REQ-010) :
+   la réponse part complète, jamais en flux.
 4. Tout échec d'intégrité produit un rapport et bloque la sortie (REQ-006).
 5. Le mode démo est marqué visuellement et refuse de s'activer si le mode
    sérieux a déjà des dossiers actifs dans la même instance (séparation REQ-007).

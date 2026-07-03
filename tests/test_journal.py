@@ -98,7 +98,7 @@ def test_le_journal_contient_les_metadonnees_utiles(client, caplog):
     assert "requete_id" in evenement and "horodatage" in evenement
 
 
-def test_le_refus_du_streaming_est_journalise(client, caplog):
+def test_la_conversion_du_streaming_est_journalisee(client, caplog):
     with caplog.at_level(logging.INFO):
         client.post(
             "/v1/chat/completions",
@@ -109,5 +109,8 @@ def test_le_refus_du_streaming_est_journalise(client, caplog):
             },
             headers={"X-Dossier-Id": "d1"},
         )
-    evenement = dernier_evenement(caplog)
-    assert evenement["statut"] == "refus_streaming"
+    # L'evenement conversion_streaming est emis avant l'evenement ok :
+    # on le cherche parmi tous les evenements, pas seulement le dernier.
+    records = [r for r in caplog.records if r.name == "sas_confiance_ia.journal"]
+    statuts = [json.loads(r.message)["statut"] for r in records]
+    assert "conversion_streaming" in statuts

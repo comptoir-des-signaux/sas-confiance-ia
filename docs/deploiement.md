@@ -94,7 +94,8 @@ curl -s -X POST http://127.0.0.1:8787/v1/chat/completions \
 
 # 2.3 Réponse brute pseudonymisée (sans ré-identification)
 #     Ajouter : -H "X-Reidentify-Response: false"
-# 2.4 Streaming refusé (REQ-010) : "stream": true  ->  HTTP 400
+# 2.4 Streaming converti (REQ-010) : "stream": true  ->  réponse complète
+#     non streamée (HTTP 200), événement conversion_streaming au journal
 # 2.5 Backend éteint : docker compose stop ollama  ->  HTTP 502
 #     avec détail limité au type d'erreur, puis docker compose start ollama
 ```
