@@ -184,9 +184,17 @@ def test_un_exemple_synthetique_active_le_mode_demo():
 
 
 def test_les_etapes_sont_numerotees():
-    # Sous-titres pédagogiques : le parcours se lit comme trois étapes.
+    # Sous-titres pédagogiques : le parcours se lit comme quatre étapes en
+    # deux colonnes (aller à gauche : 1 puis 2 ; retour à droite : 3 puis 4),
+    # à la manière du viewport d'amo-presidio, plutôt qu'en une seule pile.
     from sas_confiance_ia.ui import PAGE_HTML
 
     assert "1. Texte à pseudonymiser" in PAGE_HTML
     assert "2. Texte pseudonymisé" in PAGE_HTML
     assert "3. Réponse de l'IA" in PAGE_HTML
+    assert "4. Texte ré-identifié" in PAGE_HTML
+    assert 'class="atelier"' in PAGE_HTML
+    assert 'class="colonne"' in PAGE_HTML
+    # Les quatre panneaux sont visibles d'emblée : le parcours se comprend
+    # d'un coup d'œil, aucune zone n'apparaît après coup.
+    assert 'class="resultat"' not in PAGE_HTML

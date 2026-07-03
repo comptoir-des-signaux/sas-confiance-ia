@@ -1,7 +1,9 @@
 """Interface web minimale (Lot 12, REQ-007 côté UI).
 
 Une page unique servie par le même FastAPI : coller un texte, choisir le
-mode, voir le résumé des détections, télécharger, ré-identifier.
+mode, voir le résumé des détections, télécharger, ré-identifier. L'atelier
+se lit en deux colonnes (aller : original puis pseudonymisé ; retour :
+réponse de l'IA puis ré-identifié), à la manière du viewport d'amo-presidio.
 
 Séparation démo / sérieux (REQ-007, 02-AI-SPEC §5) :
 - en mode sérieux, la réponse expose types, positions, scores et comptes,
@@ -327,6 +329,19 @@ PAGE_HTML = (
 """
     + STYLE_COMMUN
     + """
+<style>
+  /* Atelier en deux colonnes (à la manière du viewport d'amo-presidio) :
+     l'aller à gauche (1. original, 2. pseudonymisé), le retour à droite
+     (3. réponse de l'IA, 4. ré-identifié). Les quatre panneaux sont
+     visibles d'emblée : le parcours se comprend d'un coup d'œil. */
+  main, footer { max-width: 100rem; }
+  .atelier { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2.5rem;
+             margin-top: .5rem; align-items: start; }
+  .colonne { min-width: 0; }
+  .colonne h2 { margin: 1rem 0 0; font-size: 1.05rem; color: var(--accent);
+                border-bottom: 2px solid var(--or); padding-bottom: .25rem; }
+  @media (max-width: 70rem) { .atelier { grid-template-columns: 1fr; } }
+</style>
 </head>
 <body>
 <header>
@@ -339,10 +354,6 @@ PAGE_HTML = (
 <main>
   <div id="bandeau-demo">MODE DÉMONSTRATION : valeurs visibles, à réserver aux
     données synthétiques. Ne jamais y coller de vraies données.</div>
-
-  <label for="texte">1. Texte à pseudonymiser</label>
-  <textarea id="texte"
-    placeholder="Collez ici le texte contenant des données personnelles."></textarea>
 
   <div class="ligne">
     <div>
@@ -371,30 +382,52 @@ PAGE_HTML = (
         <option value="oui">Surrogates réalistes (intégrité réduite)</option>
       </select>
     </div>
-    <button id="pseudonymiser">Pseudonymiser</button>
-    <button id="reidentifier" class="secondaire" disabled>Ré-identifier une réponse</button>
     <button id="exemple" class="secondaire">Charger un exemple (mode démo)</button>
   </div>
 
   <div id="erreur"></div>
 
-  <section class="resultat" id="resultat">
-    <label for="sortie">2. Texte pseudonymisé (à copier vers votre IA)</label>
-    <textarea id="sortie" readonly></textarea>
-    <div class="ligne">
-      <button id="copier" class="secondaire">Copier</button>
-      <button id="telecharger" class="secondaire">Télécharger</button>
+  <div class="atelier">
+    <div class="colonne">
+      <h2>Aller : protéger avant l'envoi à l'IA</h2>
+      <section>
+        <label for="texte">1. Texte à pseudonymiser</label>
+        <textarea id="texte"
+          placeholder="Collez ici le texte contenant des données personnelles."></textarea>
+        <div class="ligne">
+          <button id="pseudonymiser">Pseudonymiser</button>
+        </div>
+      </section>
+      <section>
+        <label for="sortie">2. Texte pseudonymisé (à copier vers votre IA)</label>
+        <textarea id="sortie" readonly placeholder="Le texte protégé apparaîtra ici :
+seuls des pseudonymes partent vers l'IA."></textarea>
+        <div class="ligne">
+          <button id="copier" class="secondaire">Copier</button>
+          <button id="telecharger" class="secondaire">Télécharger</button>
+        </div>
+      </section>
     </div>
-    <div id="synthese"></div>
-  </section>
+    <div class="colonne">
+      <h2>Retour : ré-identifier en zone de confiance</h2>
+      <section>
+        <label for="reponse-ia">3. Réponse de l'IA à ré-identifier</label>
+        <textarea id="reponse-ia"
+          placeholder="Collez ici la réponse contenant des placeholders."></textarea>
+        <div class="ligne">
+          <button id="reidentifier" class="secondaire" disabled
+            title="Pseudonymisez d'abord un texte dans ce dossier.">Ré-identifier</button>
+        </div>
+      </section>
+      <section>
+        <label for="texte-final">4. Texte ré-identifié (zone de confiance)</label>
+        <textarea id="texte-final" readonly placeholder="La réponse redevient lisible ici,
+sans quitter votre zone de confiance."></textarea>
+      </section>
+    </div>
+  </div>
 
-  <section class="resultat" id="zone-reidentification">
-    <label for="reponse-ia">3. Réponse de l'IA à ré-identifier</label>
-    <textarea id="reponse-ia"
-      placeholder="Collez ici la réponse contenant des placeholders."></textarea>
-    <label for="texte-final">Texte ré-identifié (zone de confiance)</label>
-    <textarea id="texte-final" readonly></textarea>
-  </section>
+  <div id="synthese"></div>
 </main>
 <footer>
   Le vault de correspondance ne quitte jamais cette instance. La
@@ -464,9 +497,8 @@ el("pseudonymiser").addEventListener("click", async () => {
       surrogates: el("surrogates").value === "oui",
     });
     el("sortie").value = donnees.texte;
-    el("resultat").style.display = "block";
-    el("zone-reidentification").style.display = "block";
     el("reidentifier").disabled = false;
+    el("reidentifier").title = "";
     afficherSynthese(donnees);
   } catch (erreur) { montrerErreur(erreur.message); }
 });
