@@ -47,5 +47,6 @@ Tout le cadrage du projet est public : produit
 ([PRD](specs/01-PRD.md)), risques et parades IA
 ([AI-SPEC](specs/02-AI-SPEC.md)), exigences falsifiables
 ([SPEC](specs/03-SPEC.md)), décisions d'architecture
-([ADR](specs/04-ADR.md)), feuille de route ([PLAN](specs/05-PLAN.md)) et
-[questions arbitrées](specs/QUESTIONS.md).
+([ADR](specs/04-ADR.md)) et feuille de route ([PLAN](specs/05-PLAN.md)).
+Les documents de travail (consignes d'agents, arbitrages) restent lisibles
+[dans le dépôt](https://github.com/comptoir-des-signaux/sas-confiance-ia/tree/main/docs/specs).

@@ -57,7 +57,11 @@ nav:
       - SPEC (exigences): specs/03-SPEC.md
       - ADR (décisions): specs/04-ADR.md
       - PLAN (feuille de route): specs/05-PLAN.md
-      - HANDOFF (consignes agents): specs/06-HANDOFF.md
-      - QUESTIONS (arbitrages): specs/QUESTIONS.md
   - Publication:
       - Checklist de publication: checklist-publication.md
+
+# Documents de travail internes (consignes d'agents, arbitrages en cours) :
+# hors site, mais toujours lisibles dans le dépôt public sous docs/specs/.
+exclude_docs: |
+  specs/06-HANDOFF.md
+  specs/QUESTIONS.md
