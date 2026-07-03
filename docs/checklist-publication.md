@@ -73,4 +73,4 @@ commande ou la vérification indiquée. Une case non cochée bloque le push.
 
 | Date | Périmètre | Résultat | Qui |
 |---|---|---|---|
-| 2026-07-03 | Historique complet (sections 1 et 2) | Propre : aucun secret, aucun fichier sensible, 3 faux positifs documentés | Claude (session lot 16), à contresigner par Pascal |
+| 2026-07-03 | Historique complet (sections 1 et 2) | Propre : aucun secret, aucun fichier sensible, 3 faux positifs documentés | Claude (session lot 16), contresigné par Pascal Chevallot le 2026-07-03 |
