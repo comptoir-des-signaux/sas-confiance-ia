@@ -73,8 +73,26 @@ Client (OpenWebUI) ──POST /v1/chat/completions──▶ Sas
   Sas ──réponse finale──▶ Client
 ```
 
-Headers de pilotage : `X-Dossier-Id`, `X-Privacy-Mode` (reversible |
-irreversible | review), `X-Reidentify-Response`. Streaming refusé en v1.
+**En-têtes de pilotage réellement lus par le proxy**, au terme de la Phase 1 :
+
+- `X-Dossier-Id` : rattache la requête à un dossier, donc à sa coréférence, à
+  ses compteurs de placeholders et à sa politique.
+- `X-Reidentify-Response` : ré-identifier la réponse du modèle avant de la
+  rendre au client. Vrai par défaut ; le passer à `false` sert notamment à
+  vérifier par soi-même ce que le modèle a reçu.
+
+Le cadrage initial prévoyait un troisième en-tête, `X-Privacy-Mode`
+(`reversible` | `irreversible` | `review`). **Il n'a pas été implémenté.** Le
+pilotage s'est révélé plus utile au grain de l'entité qu'au grain de la
+requête : il passe par les politiques par type (`pseudonymiser`, `masquer`,
+`conserver`, `revue`), définies par instance (`SAS_POLITIQUES`) ou par dossier
+(champ `politiques` de `/ui/pseudonymiser`) et conservées dans le vault. Un
+client qui enverrait `X-Privacy-Mode` ne pilote rien : l'en-tête est ignoré.
+
+**Streaming** : `stream=true` n'est pas refusé mais **converti** en
+non-streaming, avec un événement `conversion_streaming` au journal (REQ-010,
+ADR-008). La requête aboutit, et la réponse complète n'est jamais servie en
+flux. Refuser aurait cassé les clients qui activent le streaming par défaut.
 
 ## 6. Non-objectifs (assumés)
 
