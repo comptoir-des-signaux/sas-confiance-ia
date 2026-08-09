@@ -31,6 +31,15 @@ licence [EUPL-1.2](LICENSE).
 > DPO/RSSI. Usages visés aujourd'hui : poste de travail, atelier, formation,
 > expérimentation contrôlée sur corpus synthétique.
 
+## Le flux : ce qui reste, ce qui sort
+
+![Schéma du flux : dans la zone de confiance, le poste de travail envoie un
+document au sas, qui détecte les données personnelles, les remplace par des
+pseudonymes et conserve la table de correspondance dans son vault. Seul le
+texte pseudonymisé franchit la limite de la zone de confiance vers le backend
+d'IA. La réponse revient pseudonymisée, puis le sas la ré-identifie localement.
+Le journal ne contient que des métadonnées.](docs/assets/schema-flux.svg)
+
 ## La preuve par le flux
 
 L'argument du sas n'est pas « nous pseudonymisons », c'est « vous pouvez le
