@@ -32,16 +32,69 @@ collectivités territoriales et la fonction publique, sous licence
     registre, AIPD si nécessaire, validation DPO et RSSI, tests sur un corpus
     représentatif de votre organisation).
 
-## Par où commencer
+## La preuve par le flux
 
-- **Installer le sas** : le [tutoriel pas à pas](tutoriel-installation.md)
-  (Kubuntu / Docker, avec ou sans GPU).
-- **L'exploiter** : le [guide de déploiement](deploiement.md) (cycle de vie
-  du conteneur, vault persistant, backends souverains, politiques).
-- **Former avec** : le [parcours formateur](parcours-formateur.md) (déroulé
-  d'atelier d'1 h 30 sur corpus synthétique).
-- **Contribuer** :
-  [CONTRIBUTING](https://github.com/comptoir-des-signaux/sas-confiance-ia/blob/main/CONTRIBUTING.md).
+L'argument du sas n'est pas « nous pseudonymisons ». C'est « vous pouvez le
+vérifier ». Demandez au modèle de recopier votre question, ré-identification
+désactivée : sa réponse brute montre exactement ce qu'il a reçu.
+
+| Étape | Contenu |
+|---|---|
+| Ce que vous saisissez | `quel dossier suit Marie Martin (marie.martin@exemple.fr) ?` |
+| Ce que le modèle reçoit | `quel dossier suit [PERSONNE_001] ([EMAIL_001]) ?` |
+| Ce que le modèle renvoie | `quel dossier suit [PERSONNE_001] ([EMAIL_001]) ?` |
+| Ce que vous recevez | `quel dossier suit Marie Martin (marie.martin@exemple.fr) ?` |
+
+Le modèle n'a jamais vu les valeurs : il ne peut restituer que ce qu'il a
+reçu. Cette propriété n'est pas déclarative, elle est tenue par des tests. Un
+faux backend capture le payload HTTP réellement émis, et la suite échoue si
+une valeur sensible connue y figure. La commande complète est dans le
+[tutoriel d'installation](tutoriel-installation.md#5-premiere-pseudonymisation).
+
+## À qui s'adresse ce sas
+
+**Vous êtes DSI, RSSI ou chef de projet numérique.** Vous voulez savoir ce qui
+sort réellement de votre réseau, comment le sas se déploie et où vit la clé du
+vault. Commencez par le [guide de déploiement](deploiement.md) : cycle de vie
+du conteneur, vault persistant, backends souverains, politiques par type
+d'entité.
+
+**Vous êtes DPO, juriste ou délégué à la protection des données.** Vous voulez
+savoir ce que l'outil réduit, ce qu'il ne réduit pas, et ce qui reste à votre
+charge. Lisez [ce que le sas garantit](#ce-que-le-sas-garantit-et-ne-garantit-pas)
+plus bas, puis les mesures publiées :
+[détection](eval/evaluation-ner.md) et [juge LLM](eval/evaluation-juge.md).
+Le sas ne remplace ni le registre, ni l'AIPD, ni votre analyse.
+
+**Vous formez, accompagnez ou animez.** Vous cherchez un support concret pour
+montrer à des agents ce que devient un document envoyé à une IA. Le
+[parcours formateur](parcours-formateur.md) est un déroulé d'atelier d'1 h 30
+sur corpus 100 % synthétique.
+
+**Ce que le sas n'est pas.** Ce n'est pas une plateforme multi-utilisateurs
+prête à l'emploi : il n'y a ni comptes, ni authentification, ni cloisonnement
+entre utilisateurs, ni service hébergé. Ce n'est pas non plus une offre avec
+engagement de support : c'est un commun, maintenu comme tel. Ce qu'il est : un
+démonstrateur vérifiable, un support de formation et une base de discussion
+entre DSI, DPO et RSSI.
+
+## Trois parcours
+
+**1. Comprendre en 3 minutes.** Cette page, le tableau de la preuve par le
+flux ci-dessus, et les [mesures publiées](eval/evaluation-ner.md). Vous saurez
+ce que le sas fait, ce qu'il ne fait pas, et à quel niveau de rappel.
+
+**2. Essayer en 30 minutes.** Le [tutoriel d'installation](tutoriel-installation.md)
+(Kubuntu ou Docker, avec ou sans GPU), puis une première pseudonymisation sur
+le [corpus synthétique](https://github.com/comptoir-des-signaux/sas-confiance-ia/tree/main/corpus/synthetique).
+N'utilisez jamais un document réel pour vos essais.
+
+**3. Auditer et contribuer.** Le cadrage complet est public (voir plus bas),
+les exigences sont falsifiables, les tests sont dans le dépôt. Pour proposer
+un cas de détection manqué ou une évolution :
+[CONTRIBUTING](https://github.com/comptoir-des-signaux/sas-confiance-ia/blob/main/CONTRIBUTING.md).
+Pour signaler une fuite, jamais d'issue publique :
+[SECURITY](https://github.com/comptoir-des-signaux/sas-confiance-ia/blob/main/SECURITY.md).
 
 ## Ce que le sas garantit (et ne garantit pas)
 
@@ -64,5 +117,9 @@ Tout le cadrage du projet est public : produit
 ([AI-SPEC](specs/02-AI-SPEC.md)), exigences falsifiables
 ([SPEC](specs/03-SPEC.md)), décisions d'architecture
 ([ADR](specs/04-ADR.md)) et feuille de route ([PLAN](specs/05-PLAN.md)).
-Les documents de travail (consignes d'agents, arbitrages) restent lisibles
+
+Ces documents portent aussi leurs écarts : quand ce qui a été livré diffère de
+ce qui avait été prévu, l'écart est signalé là où il se trouve plutôt que
+gommé. Les documents de travail (consignes de reprise, arbitrages en cours)
+restent lisibles
 [dans le dépôt](https://github.com/comptoir-des-signaux/sas-confiance-ia/tree/main/docs/specs).
