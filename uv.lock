@@ -1780,7 +1780,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "fr-core-news-lg", marker = "extra == 'ner-repli-spacy'", url = "https://github.com/explosion/spacy-models/releases/download/fr_core_news_lg-3.8.0/fr_core_news_lg-3.8.0-py3-none-any.whl" },
     { name = "fr-core-news-sm", marker = "extra == 'ner'", url = "https://github.com/explosion/spacy-models/releases/download/fr_core_news_sm-3.8.0/fr_core_news_sm-3.8.0-py3-none-any.whl" },
-    { name = "httpx2" },
+    { name = "httpx2", specifier = ">=2.5,<3" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5,<10" },
     { name = "presidio-analyzer", marker = "extra == 'ner'", specifier = ">=2.2,<3" },
     { name = "protobuf", marker = "extra == 'ner'", specifier = ">=5" },

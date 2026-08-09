@@ -14,7 +14,14 @@ dependencies = [
   "pydantic>=2",
   "cryptography>=43",
   "uvicorn>=0.30",
-  "httpx2",
+  # Client HTTP du proxy. httpx2 est le successeur de httpx (même auteur, Tom
+  # Christie ; maintenance Pydantic, https://github.com/pydantic/httpx2),
+  # licence BSD-3-Clause compatible EUPL-1.2. Il apporte truststore, donc le
+  # magasin de certificats du système plutôt qu'un bundle embarqué : c'est ce
+  # qui permet à une DSI d'imposer sa propre autorité de certification sur un
+  # backend souverain. Borné explicitement : une dépendance HTTP non bornée
+  # dans un outil de protection des données est une porte laissée ouverte.
+  "httpx2>=2.5,<3",
   # Surrogates réalistes fr_FR (REQ-012), licence MIT compatible EUPL-1.2.
   "faker>=30",
   # Fichiers (Lot 15) : python-docx (MIT), pypdf (BSD), multipart FastAPI.
