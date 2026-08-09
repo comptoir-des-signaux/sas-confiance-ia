@@ -3,7 +3,7 @@
 Sas Confiance IA est un outil de réduction du risque de circulation des
 données personnelles. Une faille dans un tel outil est plus grave qu'ailleurs :
 elle transforme une garantie affichée en faux sentiment de sécurité. Ce
-document dit comment nous prévenir, et ce que nous nous engageons à faire.
+document dit comment nous prévenir, et ce qui se passe ensuite.
 
 > *English: report vulnerabilities privately via GitHub's private vulnerability
 > reporting, never through a public issue. Never include real personal data in
@@ -79,20 +79,22 @@ valeurs à clés valides (NIR, SIRET, IBAN) qui n'appartiennent à personne. Un
 signalement contenant des données réelles sera supprimé et vous sera renvoyé
 pour reformulation.
 
-## Ce que nous nous engageons à faire
+## Comment un signalement est traité
 
-- **Accusé de réception sous 5 jours ouvrés.**
-- **Première qualification sous 15 jours ouvrés** : périmètre, exigence
-  enfreinte, gravité.
+- **Qualification** : périmètre, exigence enfreinte, gravité. Un signalement
+  hors périmètre (faux négatif, absence d'authentification) est requalifié et
+  vous est réexpliqué, jamais fermé sans réponse.
 - **Correction assortie de son test de non-régression.** Un correctif de
   sécurité n'est jamais fusionné sans le test qui échouait avant lui : c'est
   la règle du projet, y compris pour nous.
 - **Publication de la faille une fois corrigée**, avec sa mesure d'impact.
   Un projet qui se vend sur l'honnêteté des limites publie aussi ses failles.
-- **Crédit au rapporteur** dans les notes de version, sauf demande contraire.
+- **Crédit au rapporteur**, sauf demande contraire de sa part.
 
-Ce projet est un commun porté par une structure de petite taille : ces délais
-sont un engagement de traitement, pas un contrat de service.
+Ce commun est maintenu par une structure de petite taille. Les signalements
+sont pris au sérieux et traités, mais les délais de réponse varient selon les
+périodes : nous préférons le dire plutôt qu'afficher un engagement de délai
+que nous ne pourrions pas tenir toute l'année.
 
 ## Versions suivies
 
