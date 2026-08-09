@@ -16,6 +16,22 @@ collectivités territoriales et la fonction publique, sous licence
 > reversible placeholders, proxies OpenAI-compatible requests, re-identifies
 > responses locally. The mapping vault never leaves your trust zone.*
 
+!!! warning "Maturité : V1 locale, poste unique"
+
+    Le sas tourne dans votre zone de confiance, sur la boucle locale
+    (`127.0.0.1`). Il ne porte **aucune authentification** : quiconque atteint
+    son port et connaît un identifiant de dossier peut ré-identifier. C'est un
+    périmètre assumé, pas un oubli.
+
+    **Usages visés aujourd'hui** : poste de travail, atelier, formation,
+    expérimentation contrôlée sur corpus synthétique.
+
+    **À ne pas faire encore** : exposer le sas sur un réseau partagé ou sur
+    Internet sans authentification frontale et filtrage ; traiter de vrais
+    documents sans cadrage préalable (base légale, information des personnes,
+    registre, AIPD si nécessaire, validation DPO et RSSI, tests sur un corpus
+    représentatif de votre organisation).
+
 ## Par où commencer
 
 - **Installer le sas** : le [tutoriel pas à pas](tutoriel-installation.md)
