@@ -44,6 +44,7 @@ markdown_extensions:
 
 nav:
   - Accueil: index.md
+  - Comment ce sas a été construit: methode.md
   - Utiliser le sas:
       - Tutoriel d'installation: tutoriel-installation.md
       - Guide de déploiement: deploiement.md
