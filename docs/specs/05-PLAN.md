@@ -54,12 +54,18 @@ binaire : aucune valeur en clair.
 `POST /v1/chat/completions` + `GET /v1/models` (FastAPI). Le faux backend
 enregistre le payload HTTP exact. Tests de non-fuite : aucune valeur de
 l'oracle dans le payload capturé. `stream=true` → 400 explicite.
+**Écart livré (Lot 7)** : le 400 a été remplacé par la conversion en
+non-streaming journalisée (REQ-010, ADR-008), pour ne pas casser les clients
+qui activent le streaming par défaut.
 **REQ :** 001, 010, 013 (partiel : format OpenAI).
 
 ### Lot 7 : contrôle d'intégrité et ré-identification de la réponse
 Placeholders inconnus / manquants / altérés → rapport d'intégrité, blocage ou
 `review_required`. Headers `X-Dossier-Id`, `X-Privacy-Mode`,
 `X-Reidentify-Response`.
+**Écart livré** : `X-Privacy-Mode` n'a jamais été implémenté. Le pilotage par
+mode global a été remplacé au Lot 14 par les politiques par type d'entité,
+plus fines et persistées par dossier (voir 01-PRD §5).
 **REQ :** 006, et les 5 cas de test d'intégrité du cadrage §14.6.
 
 ### Lot 8 : journalisation propre
