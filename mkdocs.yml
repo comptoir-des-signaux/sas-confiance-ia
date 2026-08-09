@@ -60,8 +60,11 @@ nav:
   - Publication:
       - Checklist de publication: checklist-publication.md
 
-# Documents de travail internes (consignes d'agents, arbitrages en cours) :
-# hors site, mais toujours lisibles dans le dépôt public sous docs/specs/.
+# Documents de travail non publiés sur le site, mais conservés dans le dépôt
+# public et lisibles sous docs/specs/ : consignes de reprise entre sessions
+# (06-HANDOFF) et arbitrages en cours (QUESTIONS). Ils sont hors navigation
+# parce qu'ils bougent au fil de l'eau et n'ont pas la stabilité attendue
+# d'une page publiée, pas parce qu'ils seraient confidentiels.
 exclude_docs: |
   specs/06-HANDOFF.md
   specs/QUESTIONS.md
