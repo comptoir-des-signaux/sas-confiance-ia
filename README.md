@@ -1,5 +1,10 @@
 # Sas Confiance IA
 
+[![CI](https://github.com/comptoir-des-signaux/sas-confiance-ia/actions/workflows/ci.yml/badge.svg)](https://github.com/comptoir-des-signaux/sas-confiance-ia/actions/workflows/ci.yml)
+[![Documentation](https://github.com/comptoir-des-signaux/sas-confiance-ia/actions/workflows/docs.yml/badge.svg)](https://github.com/comptoir-des-signaux/sas-confiance-ia/actions/workflows/docs.yml)
+[![Licence EUPL-1.2](https://img.shields.io/badge/licence-EUPL--1.2-blue)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776ab)](pyproject.toml)
+
 **Le sas de pseudonymisation avant IA** : détectez les données personnelles
 françaises dans vos textes, remplacez-les par des pseudonymes, envoyez le texte
 protégé à un modèle de langage, puis ré-identifiez la réponse **en zone de
@@ -9,10 +14,50 @@ Un commun numérique porté par [Comptoir des Signaux](https://www.comptoirdessi
 conçu pour les collectivités territoriales et la fonction publique, sous
 licence [EUPL-1.2](LICENSE).
 
+**Documentation complète :**
+[comptoir-des-signaux.github.io/sas-confiance-ia](https://comptoir-des-signaux.github.io/sas-confiance-ia/)
+
 > *English summary: a French-first pseudonymization gateway for LLM usage.
 > Detects French personal data (NIR, SIRET, IBAN, names...), substitutes
 > reversible placeholders, proxies OpenAI-compatible requests, re-identifies
 > responses locally. The mapping vault never leaves your trust zone.*
+
+> [!WARNING]
+> **Maturité : V1 locale, poste unique.** Le sas est conçu pour tourner dans
+> votre zone de confiance, sur la boucle locale (`127.0.0.1`). Il ne porte
+> **aucune authentification** : quiconque atteint son port et connaît un
+> identifiant de dossier peut ré-identifier. Ne l'exposez pas sur un réseau
+> partagé ni sur Internet sans authentification frontale, filtrage et cadrage
+> DPO/RSSI. Usages visés aujourd'hui : poste de travail, atelier, formation,
+> expérimentation contrôlée sur corpus synthétique.
+
+## La preuve par le flux
+
+L'argument du sas n'est pas « nous pseudonymisons », c'est « vous pouvez le
+vérifier ». Demandez au modèle de recopier votre question, ré-identification
+désactivée : sa réponse brute montre ce qu'il a réellement reçu.
+
+```bash
+curl -s -X POST http://127.0.0.1:8787/v1/chat/completions \
+  -H "Content-Type: application/json" -H "X-Dossier-Id: essai-001" \
+  -H "X-Reidentify-Response: false" \
+  -d '{
+    "model": "mistral-small:24b",
+    "messages": [{"role": "user", "content": "Recopie exactement ma question : quel dossier suit Marie Martin (marie.martin@exemple.fr) ?"}]
+  }'
+```
+
+| Étape | Contenu |
+|---|---|
+| Ce que vous saisissez | `quel dossier suit Marie Martin (marie.martin@exemple.fr) ?` |
+| Ce que le modèle reçoit | `quel dossier suit [PERSONNE_001] ([EMAIL_001]) ?` |
+| Ce que le modèle renvoie | `quel dossier suit [PERSONNE_001] ([EMAIL_001]) ?` |
+| Ce que vous recevez (ré-identification active) | `quel dossier suit Marie Martin (marie.martin@exemple.fr) ?` |
+
+Le modèle n'a jamais vu les valeurs : il ne peut restituer que ce qu'il a reçu.
+Cette propriété n'est pas déclarative, elle est tenue par des tests : un faux
+backend capture le payload HTTP réellement émis, et la suite échoue si une
+valeur de l'oracle synthétique y figure (REQ-001).
 
 ## Ce que le sas garantit (et ne garantit pas)
 
@@ -92,9 +137,9 @@ La « preuve par le flux » est documentée et testée : demander au modèle de
 réciter sa question avec `X-Reidentify-Response: false`, sa réponse brute
 ne contient que des placeholders. L'interface du sas se lit en deux
 colonnes, à la manière du viewport d'amo-presidio (aller : original puis
-pseudonymisé ; retour : réponse de l'IA puis ré-identifié). Reste :
-contresigner la checklist et activer GitHub Pages (Settings > Pages >
-Source : GitHub Actions).
+pseudonymisé ; retour : réponse de l'IA puis ré-identifié). Lot 16 clos : la
+checklist de publication a été contresignée (premier passage) et le site est
+en ligne, construit et publié par GitHub Actions à chaque commit sur `main`.
 
 ## Démarrage (développement)
 
@@ -210,6 +255,14 @@ relecture) ou en `pseudonymiser` ; l'interface propose ce choix. Limites
 documentées : une date sans année n'est pas reconnue, le tiret n'est pas un
 séparateur admis (collision avec les matricules), et une date recouverte
 par une entité plus sensible reste masquée avec elle.
+
+## Contribuer et signaler
+
+- **Contribuer** : [CONTRIBUTING.md](CONTRIBUTING.md) (esprit du projet,
+  interdictions absolues, méthode TDD, licence des dépendances).
+- **Signaler une faille ou une fuite** : [SECURITY.md](SECURITY.md).
+  N'ouvrez jamais d'issue publique pour un chemin de fuite.
+- **Règles de la communauté** : [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Crédits
 
