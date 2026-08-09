@@ -95,60 +95,86 @@ documentées et mesurées, jamais masquées.
 
 ## État du projet
 
-**Phase 1 livrée** : plus de 200 tests automatisés
-prouvent les invariants de sécurité sur faux backend de capture : non-fuite
-des valeurs détectées, désormais au périmètre complet noms / lieux /
-organisations inclus (REQ-001), ré-identification exacte (REQ-002), journaux
-sans donnée personnelle (REQ-003), vault chiffré au repos (REQ-004),
-compteurs persistants (REQ-005), placeholders inconnus bloquants (REQ-006),
-streaming converti en non-streaming journalisé (REQ-010). La détection s'appuie sur le NER français
-CamemBERT (modèle épinglé, rappel et précision
-[mesurés et publiés](docs/eval/evaluation-ner.md)) et le proxy parle à tout
-backend OpenAI-compatible par simple configuration (REQ-013) : Ollama local,
-Infomaniak, Scaleway... La coréférence par dossier (REQ-011) rattache les
-mentions d'une même personne (« Jean Dupont », « M. Dupont ») au même
-placeholder entre les pièces d'un dossier ; la ré-identification restitue la
-forme la plus complète connue et les rattachements ambigus sont signalés
-pour revue, jamais fusionnés (limite documentée dans
-[`docs/specs/QUESTIONS.md`](docs/specs/QUESTIONS.md)). Voir
-[`docs/deploiement.md`](docs/deploiement.md)
-pour l'installation Docker et la validation manuelle,
-[`docs/specs/`](docs/specs/) pour le cadrage complet et
-[`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md) pour la feuille de route.
-Une interface web minimale est servie à la racine (`http://127.0.0.1:8787/`) :
-coller un texte, pseudonymiser, ré-identifier ; le mode sérieux n'affiche
-jamais les valeurs détectées (types, positions et comptes seulement), le mode
-démonstration (bandeau distinct, données synthétiques) refuse de s'activer si
-des dossiers sérieux sont actifs dans l'instance. Phase 1 complète.
-**Phase 2 en cours (lots 13 à 15 livrés)** : un juge LLM local
-optionnel (REQ-014) relit le texte déjà pseudonymisé et signale les
-identifiants indirects (fonction rare, petite commune, surnom, périphrase)
-pour revue humaine, jamais en remplacement automatique ; couverture
-[mesurée et publiée sur les canaris](docs/eval/evaluation-juge.md). Chaque
-type d'entité suit désormais une politique configurable par dossier
-(pseudonymiser, masquer sans coffre, conserver, revue : cadrage §9.5), la
-date de naissance est distinguée des dates procédurales (REQ-008) et les
-personnes peuvent recevoir des surrogates réalistes cohérents en genre,
-réversibles par le vault (REQ-012, arbitrage Q5). La page Fichiers accepte
-le glisser-déposer (.txt, .md, .csv, .docx, .pdf textuel), affiche le
-document et sa version pseudonymisée côte à côte avec surlignage, et
-exporte en .txt ou .docx reconstruit.
-**Lot 16 (publication du commun)** : site de documentation MkDocs Material
-publié par GitHub Pages ([tutoriel d'installation](docs/tutoriel-installation.md),
-[parcours formateur](docs/parcours-formateur.md), cadrage rendu public par
-transparence), [CONTRIBUTING](CONTRIBUTING.md),
-[checklist de publication](docs/checklist-publication.md) (REQ-015) avec
-premier scan de secrets de l'historique passé et propre. Une interface de
-chat optionnelle (OpenWebUI, profil Docker Compose dédié) se branche sur le
-sas : la boucle y est entièrement automatique (pseudonymisation à l'aller,
-ré-identification au retour, l'utilisateur ne voit jamais un placeholder).
-La « preuve par le flux » est documentée et testée : demander au modèle de
-réciter sa question avec `X-Reidentify-Response: false`, sa réponse brute
-ne contient que des placeholders. L'interface du sas se lit en deux
-colonnes, à la manière du viewport d'amo-presidio (aller : original puis
-pseudonymisé ; retour : réponse de l'IA puis ré-identifié). Lot 16 clos : la
-checklist de publication a été contresignée (premier passage) et le site est
-en ligne, construit et publié par GitHub Actions à chaque commit sur `main`.
+**Version publiée : [v0.1.0](https://github.com/comptoir-des-signaux/sas-confiance-ia/releases/tag/v0.1.0).**
+Phase 1 complète, Phase 2 en cours (lots 13 à 15 livrés), publication du
+commun close (lot 16).
+
+### Ce qui est prouvé, pas déclaré
+
+299 tests automatisés. Pendant la suite, le sas ne parle pas à un vrai modèle
+mais à un faux backend qui enregistre le payload HTTP exact qu'il reçoit : les
+tests échouent si une seule valeur de l'oracle synthétique y apparaît.
+
+| Exigence | Ce qui est prouvé |
+|---|---|
+| REQ-001 | aucune valeur détectée dans le payload envoyé au backend, noms, lieux et organisations compris |
+| REQ-002 | ré-identification exacte, à la forme canonique près pour les alias fusionnés |
+| REQ-003 | journaux sans donnée personnelle |
+| REQ-004 | vault chiffré au repos |
+| REQ-005 | compteurs de placeholders persistants par dossier |
+| REQ-006 | placeholders inconnus bloquants |
+| REQ-007 | séparation stricte des modes démonstration et sérieux |
+| REQ-008 | date de naissance distinguée des dates procédurales |
+| REQ-009 | corpus de test 100 % synthétique |
+| REQ-010 | streaming converti en non-streaming journalisé |
+
+### Phase 1 : le socle (livrée)
+
+- **Détection** : motifs français validés par leur clé de contrôle, puis NER
+  CamemBERT (modèle épinglé par révision exacte, rappel et précision
+  [mesurés et publiés](docs/eval/evaluation-ner.md)).
+- **Proxy OpenAI-compatible** (REQ-013) : Ollama local, Infomaniak, Scaleway,
+  par simple configuration, sans code spécifique par fournisseur.
+- **Coréférence par dossier** (REQ-011) : « Jean Dupont » et « M. Dupont »
+  reçoivent le même placeholder entre les pièces d'un dossier, et la
+  ré-identification restitue la forme la plus complète connue. Un
+  rattachement ambigu crée une entité distincte et part en revue : jamais de
+  fusion hasardeuse (arbitrage Q1).
+- **Interface web minimale** sur `http://127.0.0.1:8787/`, en deux colonnes :
+  coller, pseudonymiser, ré-identifier. Le mode sérieux n'affiche jamais les
+  valeurs détectées (types, positions et comptes seulement) ; le mode
+  démonstration refuse de s'activer si un dossier sérieux existe dans
+  l'instance.
+
+### Phase 2 : affiner sans desserrer (lots 13 à 15 livrés)
+
+- **Juge LLM local optionnel** (REQ-014) : relit le texte déjà pseudonymisé et
+  signale les identifiants indirects (fonction rare, petite commune, surnom,
+  périphrase) pour revue humaine, jamais en remplacement automatique.
+  Couverture [mesurée et publiée sur les canaris](docs/eval/evaluation-juge.md).
+- **Politiques par type d'entité** : pseudonymiser, masquer sans coffre,
+  conserver ou signaler pour revue. Défauts par instance, surcharge par
+  dossier conservée dans le vault.
+- **Surrogates réalistes** (REQ-012, arbitrage Q5) : noms factices cohérents
+  en genre, réversibles par le vault, en option par dossier. Le mode
+  placeholder reste le défaut.
+- **Fichiers** : glisser-déposer de `.txt`, `.md`, `.csv`, `.docx` et `.pdf`
+  textuels, document et version pseudonymisée côte à côte avec surlignage,
+  exports `.txt` et `.docx` reconstruit. Les PDF scannés sont refusés : pas
+  d'OCR en v1.
+
+### Publication du commun (lot 16, clos)
+
+- **Site de documentation** MkDocs Material, publié par GitHub Actions à
+  chaque commit sur `main` : [tutoriel d'installation](docs/tutoriel-installation.md),
+  [guide de déploiement](docs/deploiement.md),
+  [parcours formateur](docs/parcours-formateur.md),
+  [comment ce sas a été construit](docs/methode.md) et le
+  [cadrage complet](docs/specs/) rendu public par transparence.
+- **Checklist de publication** (REQ-015) contresignée, premier scan de secrets
+  de l'historique passé et propre.
+- **Interface de chat optionnelle** (OpenWebUI, profil Docker Compose dédié) :
+  la boucle y est entièrement automatique, l'utilisateur ne voit jamais un
+  placeholder.
+
+### Ce qui reste ouvert
+
+Les limites connues sont suivies en
+[issues publiques](https://github.com/comptoir-des-signaux/sas-confiance-ia/issues) :
+corpus d'évaluation encore trop petit pour que les mesures soient
+interprétables, authentification et topologies de déploiement non arbitrées,
+pilotage de la politique depuis le proxy. La feuille de route détaillée et ses
+écarts sont dans [`docs/specs/05-PLAN.md`](docs/specs/05-PLAN.md).
 
 ## Démarrage (développement)
 
