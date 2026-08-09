@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 540" width="1220" height="540" role="img" aria-labelledby="titre desc">
+<title id="titre">Le flux du Sas Confiance IA</title>
+<desc id="desc">Dans la zone de confiance, le poste de travail envoie un document au sas, qui détecte les données personnelles, les remplace par des pseudonymes et conserve la table de correspondance dans son vault. Seul le texte pseudonymisé franchit la limite de la zone de confiance vers le backend d'IA. La réponse revient pseudonymisée, puis le sas la ré-identifie localement avant de la rendre au poste de travail. Le journal ne contient que des métadonnées.</desc>
+<rect width="1220" height="540" fill="#1F519B"/>
+<text x="26" y="46" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="25" fill="#FFFFFF" font-weight="700" text-anchor="start">Le flux : ce qui reste, ce qui sort</text>
+<text x="26" y="72" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#B9CCE8" font-weight="400" text-anchor="start">Sas Confiance IA, topologie locale (V1)</text>
+<rect x="26" y="92" width="680" height="412" rx="14" fill="#153B72" stroke="#FDC948" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="44" y="120" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#FDC948" font-weight="700" text-anchor="start">ZONE DE CONFIANCE</text>
+<text x="44" y="140" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#B9CCE8" font-weight="400" text-anchor="start">votre infrastructure, rien n'en sort en clair</text>
+<rect x="56" y="210" width="160" height="84" rx="10" fill="#FFFFFF" stroke="none" stroke-width="2"/>
+<text x="136.0" y="244" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" fill="#2B2B2B" font-weight="700" text-anchor="middle">Poste de travail</text>
+<text x="136.0" y="266" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#5A5A5A" font-weight="400" text-anchor="middle">document original</text>
+<rect x="346" y="158" width="330" height="188" rx="10" fill="#FFFFFF" stroke="none" stroke-width="2"/>
+<text x="511.0" y="190" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17" fill="#1F519B" font-weight="700" text-anchor="middle">Sas Confiance IA</text>
+<text x="368" y="220" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13.5" fill="#2B2B2B" font-weight="400" text-anchor="start">1. détection : regex FR, NER, juge local</text>
+<text x="368" y="246" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13.5" fill="#2B2B2B" font-weight="400" text-anchor="start">2. pseudonymisation</text>
+<text x="368" y="272" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13.5" fill="#2B2B2B" font-weight="400" text-anchor="start">3. contrôle d'intégrité au retour</text>
+<text x="368" y="298" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13.5" fill="#2B2B2B" font-weight="400" text-anchor="start">4. ré-identification</text>
+<rect x="382" y="392" width="258" height="72" rx="10" fill="#FDC948" stroke="none" stroke-width="2"/>
+<text x="511.0" y="422" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" fill="#1F519B" font-weight="700" text-anchor="middle">Vault</text>
+<text x="511.0" y="444" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#4A3C10" font-weight="400" text-anchor="middle">table de correspondance, chiffrée</text>
+<line x1="511.0" y1="350" x2="511.0" y2="376" stroke="#FDC948" stroke-width="3"/>
+<polygon points="511.0,388 504.0,376 518.0,376" fill="#FDC948"/>
+<line x1="537.0" y1="388" x2="537.0" y2="362" stroke="#FDC948" stroke-width="3"/>
+<polygon points="537.0,350 530.0,362 544.0,362" fill="#FDC948"/>
+<line x1="220" y1="236" x2="330" y2="236" stroke="#FDC948" stroke-width="3"/>
+<polygon points="342,236 330,229 330,243" fill="#FDC948"/>
+<line x1="342" y1="272" x2="232" y2="272" stroke="#FDC948" stroke-width="3"/>
+<polygon points="220,272 232,265 232,279" fill="#FDC948"/>
+<text x="281.0" y="224" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#B9CCE8" font-weight="400" text-anchor="middle">original</text>
+<text x="281.0" y="292" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#B9CCE8" font-weight="400" text-anchor="middle">ré-identifié</text>
+<rect x="906" y="210" width="284" height="84" rx="10" fill="none" stroke="#B9CCE8" stroke-width="2"/>
+<text x="1048.0" y="244" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="16" fill="#FFFFFF" font-weight="700" text-anchor="middle">Backend d'IA</text>
+<text x="1048.0" y="268" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#B9CCE8" font-weight="400" text-anchor="middle">Ollama, Infomaniak, Scaleway</text>
+<line x1="680" y1="236" x2="890" y2="236" stroke="#FDC948" stroke-width="3"/>
+<polygon points="902,236 890,229 890,243" fill="#FDC948"/>
+<line x1="902" y1="272" x2="692" y2="272" stroke="#FDC948" stroke-width="3"/>
+<polygon points="680,272 692,265 692,279" fill="#FDC948"/>
+<text x="806.0" y="224" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#FDC948" font-weight="700" text-anchor="middle">texte pseudonymisé</text>
+<text x="806.0" y="292" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#FDC948" font-weight="700" text-anchor="middle">réponse pseudonymisée</text>
+<text x="730" y="372" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#FDC948" font-weight="700" text-anchor="start">Seuls des pseudonymes franchissent</text>
+<text x="730" y="392" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#FDC948" font-weight="700" text-anchor="start">cette limite.</text>
+<text x="730" y="420" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#B9CCE8" font-weight="400" text-anchor="start">Le vault ne la franchit jamais,</text>
+<text x="730" y="438" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#B9CCE8" font-weight="400" text-anchor="start">sous aucun mode, chiffré ou non.</text>
+<text x="44" y="470" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#B9CCE8" font-weight="400" text-anchor="start">Journal : métadonnées techniques seules,</text>
+<text x="44" y="488" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#B9CCE8" font-weight="400" text-anchor="start">jamais une valeur détectée (REQ-003).</text>
+<text x="26" y="524" font-family="'Open Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#B9CCE8" font-weight="400" text-anchor="start">Comptoir des Signaux, licence EUPL-1.2</text>
+</svg>
