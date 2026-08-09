@@ -1,0 +1,78 @@
+name: Cas de détection manqué ou excessif
+description: Une donnée personnelle non détectée (faux négatif) ou une détection abusive (faux positif).
+title: "[détection] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci : c'est la contribution la plus utile au projet. Aucun détecteur
+        n'atteint 100 % de rappel, et chaque cas signalé devient soit un test,
+        soit une limite publiée.
+
+        **Avant de continuer** : votre exemple doit être synthétique. Inventez
+        les valeurs ou reprenez le
+        [corpus synthétique](https://github.com/comptoir-des-signaux/sas-confiance-ia/tree/main/corpus/synthetique).
+
+  - type: checkboxes
+    id: donnees-synthetiques
+    attributes:
+      label: Données
+      options:
+        - label: >-
+            Je confirme que l'exemple ci-dessous ne contient **aucune donnée
+            personnelle réelle**, y compris tronquée ou modifiée à la marge.
+          required: true
+
+  - type: dropdown
+    id: nature
+    attributes:
+      label: Nature du cas
+      options:
+        - Faux négatif (une donnée personnelle n'a pas été détectée)
+        - Faux positif (une valeur non personnelle a été remplacée)
+        - Type mal attribué (détecté, mais dans la mauvaise catégorie)
+        - Chevauchement mal résolu (REQ-016)
+    validations:
+      required: true
+
+  - type: textarea
+    id: texte
+    attributes:
+      label: Texte soumis (synthétique)
+      description: Le texte exact, tel que soumis au sas.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: attendu-obtenu
+    attributes:
+      label: Attendu et obtenu
+      description: Ce que le sas aurait dû produire, et ce qu'il a produit.
+      placeholder: |
+        Attendu : « [PERSONNE_001] réside à [LIEU_001] »
+        Obtenu  : « Jean Dupont réside à [LIEU_001] »
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: >-
+        Moteur NER (`SAS_NER`), juge LLM actif ou non, politiques du dossier,
+        version ou commit du sas.
+      placeholder: |
+        SAS_NER=camembert (modèle épinglé), juge inactif, politiques par défaut
+        commit : b527372
+    validations:
+      required: true
+
+  - type: textarea
+    id: contexte
+    attributes:
+      label: Contexte métier
+      description: >-
+        Quel type de document, dans quel service ? Cela nous aide à savoir si
+        le cas est isolé ou structurel pour le secteur public territorial.
+      placeholder: Courrier d'usager reçu au service des affaires sociales.

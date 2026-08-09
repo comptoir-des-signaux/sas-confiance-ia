@@ -1,0 +1,18 @@
+# Formulaires d'issue : un cadre qui rend impossible le dépôt accidentel de
+# données personnelles réelles dans le dépôt public.
+blank_issues_enabled: false
+contact_links:
+  - name: Signaler une faille ou une fuite (canal privé)
+    url: https://github.com/comptoir-des-signaux/sas-confiance-ia/security/advisories/new
+    about: >-
+      Un chemin par lequel une valeur sensible atteint le backend, les journaux
+      ou une réponse en mode sérieux ne s'ouvre jamais en issue publique.
+      Passez par le signalement privé. Voir SECURITY.md.
+  - name: Documentation du sas
+    url: https://comptoir-des-signaux.github.io/sas-confiance-ia/
+    about: >-
+      Tutoriel d'installation, guide de déploiement, parcours formateur,
+      mesures publiées et cadrage complet.
+  - name: Comptoir des Signaux
+    url: https://www.comptoirdessignaux.com
+    about: Accompagnement, formation et AMO autour de l'IA dans le secteur public.

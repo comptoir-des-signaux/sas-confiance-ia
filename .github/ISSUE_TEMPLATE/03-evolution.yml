@@ -1,0 +1,57 @@
+name: Proposition d'évolution
+description: Un besoin métier public que le sas ne couvre pas encore.
+title: "[évolution] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Le projet refuse les fonctionnalités non demandées : chaque ajout doit
+        partir d'un besoin réel, décrit par l'organisation qui le porte. La
+        feuille de route est publique dans
+        [`docs/specs/05-PLAN.md`](https://github.com/comptoir-des-signaux/sas-confiance-ia/blob/main/docs/specs/05-PLAN.md)
+        et les arbitrages déjà tranchés dans
+        [`docs/specs/QUESTIONS.md`](https://github.com/comptoir-des-signaux/sas-confiance-ia/blob/main/docs/specs/QUESTIONS.md).
+
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Le besoin
+      description: >-
+        Quelle organisation, quel service, quel document, quel risque ?
+        Décrivez la situation avant de décrire la solution.
+      placeholder: >-
+        Un centre de gestion doit faire relire par une IA des rapports de
+        saisine du conseil médical. Aujourd'hui, la donnée de santé...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposition
+    attributes:
+      label: La piste envisagée
+      description: Facultatif. Si vous avez une idée d'implémentation, décrivez-la.
+
+  - type: textarea
+    id: risque
+    attributes:
+      label: Effet sur les garanties existantes
+      description: >-
+        Cette évolution touche-t-elle un invariant de sécurité (REQ-001 à 010) ?
+        Peut-elle dégrader la couverture de détection ou l'utilité métier du
+        texte ? Répondre « je ne sais pas » est une réponse acceptable.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: engagements
+    attributes:
+      label: Vérifications
+      options:
+        - label: >-
+            J'ai vérifié que ce besoin n'est pas déjà tranché dans
+            `QUESTIONS.md` ou planifié dans `05-PLAN.md`.
+          required: true
+        - label: >-
+            Ma description ne contient aucune donnée personnelle réelle ni
+            information confidentielle de mon organisation.
+          required: true
