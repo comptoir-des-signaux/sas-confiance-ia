@@ -1,0 +1,59 @@
+name: Anomalie
+description: Le sas ne se comporte pas comme documenté (hors détection et hors sécurité).
+title: "[anomalie] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pour un cas de détection manqué ou excessif, utilisez plutôt le
+        formulaire « Cas de détection ». Pour un chemin de fuite d'une valeur
+        sensible, **n'ouvrez pas d'issue** : voir
+        [SECURITY.md](https://github.com/comptoir-des-signaux/sas-confiance-ia/blob/main/SECURITY.md).
+
+  - type: checkboxes
+    id: donnees-synthetiques
+    attributes:
+      label: Données
+      options:
+        - label: >-
+            Je confirme qu'aucun extrait ci-dessous (texte, journal, capture,
+            trace) ne contient de donnée personnelle réelle.
+          required: true
+
+  - type: textarea
+    id: comportement
+    attributes:
+      label: Ce qui se passe, et ce qui devrait se passer
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Les étapes minimales, commandes comprises.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: environnement
+    attributes:
+      label: Environnement
+      description: >-
+        Système, mode d'installation (Docker ou uv), version de Python,
+        version ou commit du sas, backend d'IA utilisé.
+      placeholder: |
+        Kubuntu 24.04, Docker Compose, Python 3.12, commit b527372
+        backend : Ollama local (mistral-small:24b)
+    validations:
+      required: true
+
+  - type: textarea
+    id: journaux
+    attributes:
+      label: Journaux
+      description: >-
+        Le journal du sas ne contient jamais de donnée personnelle par
+        conception (REQ-003). Collez-le tel quel, en retirant toute clé d'API.
+      render: text
