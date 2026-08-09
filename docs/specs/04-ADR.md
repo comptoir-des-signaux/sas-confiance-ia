@@ -77,6 +77,20 @@ rendu au client et rien ne persiste côté serveur (usage ponctuel, pédagogie) 
 persistants (requis pour le proxy et le multi-pièces). Le mode sérieux ne
 retourne jamais le vault en clair.
 
+**État au terme de la Phase 1 : seul le mode (2) est livré**, sous deux formes
+qui partagent la même interface : vault en mémoire (rien n'est écrit sur
+disque, tout disparaît à l'arrêt du sas) et vault chiffré persistant
+(`SAS_VAULT_CHEMIN` et `SAS_VAULT_CLE`).
+
+Le mode (1) **n'est pas implémenté** : le vault n'est jamais rendu au client,
+chiffré ou non, sous aucun mode. La moitié « rien ne persiste côté serveur »
+de l'intention initiale est couverte par le vault mémoire ; la moitié « rendu
+au client » ne l'est pas, et n'est pas planifiée à ce jour. Rendre le vault au
+client déplacerait la responsabilité de sa conservation vers un poste dont le
+sas ne sait rien : la décision mérite d'être réinstruite avant d'être reprise,
+pas simplement implémentée. Aucun lecteur ne doit donc attendre de cette
+décision une fonctionnalité d'export du vault vers le poste appelant.
+
 ## ADR-008 : pas de streaming en v1 (actée via cadrage)
 
 **Décision.** `stream=true` refusé ou converti explicitement : un placeholder
