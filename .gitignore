@@ -1,6 +1,10 @@
 # Matière de cadrage interne (reste dans l'atelier, hors dépôt public)
 intrants/
 
+# Cartographie de code générée localement (graphify) : outil de navigation,
+# pas un livrable, et la régénérer coûte moins cher que la versionner.
+graphify-out/
+
 # Environnements et caches Python
 .venv/
 __pycache__/
