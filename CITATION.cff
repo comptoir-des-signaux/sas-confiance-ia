@@ -1,0 +1,47 @@
+# Métadonnées de citation, format Citation File Format 1.2.0
+# (https://citation-file-format.github.io). GitHub en fait un bouton « Cite
+# this repository » et sait l'exporter en APA et en BibTeX.
+#
+# Pourquoi un commun de pseudonymisation se cite : les travaux qui s'appuient
+# sur lui sont des mémoires, des thèses, des rapports d'AIPD et des marchés
+# publics. Une référence stable leur évite de renvoyer à une URL de dépôt qui
+# peut bouger, et rend visible la filiation du code réutilisé.
+cff-version: 1.2.0
+message: Si vous utilisez ce logiciel, merci de le citer comme suit.
+title: "Sas Confiance IA"
+abstract: >-
+  Passerelle de pseudonymisation des données personnelles françaises placée
+  devant un modèle de langage. La table de correspondance reste dans la zone de
+  confiance de l'organisation ; les invariants de sécurité sont tenus par des
+  tests automatisés sur faux backend de capture.
+type: software
+version: "0.1.0"
+date-released: "2026-08-09"
+license: EUPL-1.2
+repository-code: "https://github.com/comptoir-des-signaux/sas-confiance-ia"
+url: "https://comptoir-des-signaux.github.io/sas-confiance-ia/"
+authors:
+  - family-names: Chevallot
+    given-names: Pascal
+    affiliation: Comptoir des Signaux
+  - name: Comptoir des Signaux
+    website: "https://comptoir-des-signaux.github.io/"
+keywords:
+  - pseudonymisation
+  - protection des données
+  - RGPD
+  - modèle de langage
+  - collectivités territoriales
+  - Presidio
+  - commun numérique
+references:
+  - type: software
+    title: amo-presidio
+    authors:
+      - family-names: Bochet
+        given-names: Romain
+    repository-code: "https://github.com/rbochet/amo-presidio"
+    notes: >-
+      Les validateurs français (clé NIR avec le cas corse 2A/2B, Luhn pour
+      SIREN et SIRET) reprennent ce travail, réutilisé avec l'accord de son
+      auteur (ADR-001).

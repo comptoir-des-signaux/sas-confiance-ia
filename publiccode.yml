@@ -1,0 +1,100 @@
+# Métadonnées normalisées du logiciel, standard publiccode.yml v0.7
+# (https://yml.publiccode.tools). Ce fichier est lu par les catalogues publics
+# de logiciels libres : il décrit le sas une fois pour toutes, dans un format
+# que les annuaires savent moissonner, plutôt qu'une fiche à ressaisir partout.
+#
+# Deux choix à ne pas défaire sans raison :
+#   - developmentStatus reste "beta" tant que le périmètre est la V1 locale
+#     mono-poste. Annoncer "stable" contredirait le bandeau de maturité du
+#     README, de l'accueil du site et de SECURITY.md.
+#   - la catégorie "compliance-management" est volontairement absente : le sas
+#     réduit les données transmises et rend les flux vérifiables, il ne met
+#     personne en conformité, et une catégorie mal choisie promet à sa place.
+publiccodeYmlVersion: "0.7"
+
+name: Sas Confiance IA
+url: "https://github.com/comptoir-des-signaux/sas-confiance-ia"
+landingURL: "https://comptoir-des-signaux.github.io/sas-confiance-ia/"
+releaseDate: "2026-08-09"
+softwareVersion: "0.1.0"
+
+platforms:
+  - linux
+  - web
+
+categories:
+  - it-security
+  - document-management
+
+developmentStatus: beta
+softwareType: standalone/web
+
+description:
+  fr:
+    localisedName: Sas Confiance IA
+    shortDescription: Passerelle de pseudonymisation des données personnelles françaises placée devant un modèle de langage, avec ré-identification locale
+    longDescription: |
+      Sas Confiance IA est une passerelle compatible OpenAI qui s'intercale
+      entre un usage métier et un modèle de langage. Elle détecte les données
+      personnelles françaises d'un texte ou d'un fichier, les remplace par des
+      pseudonymes avant l'envoi au modèle, puis ré-identifie la réponse dans la
+      zone de confiance. La table de correspondance ne quitte jamais
+      l'infrastructure de l'organisation : ni vers le modèle, ni vers les
+      journaux, ni vers une réponse d'API en mode sérieux.
+
+      La détection est française d'abord : identifiants validés par leur clé de
+      contrôle (NIR avec le cas corse 2A/2B, SIRET et SIREN par Luhn, IBAN,
+      téléphones, plaques), puis reconnaissance d'entités nommées CamemBERT via
+      Presidio, puis une passe optionnelle de relecture par un modèle local qui
+      signale les identifiants indirects pour revue humaine, jamais en
+      remplacement automatique.
+
+      Ce que le sas fait est prouvé plutôt que déclaré : chaque exigence de
+      sécurité est tenue par un test automatisé qui interroge un faux backend
+      enregistrant le payload HTTP réellement émis, et la suite échoue si une
+      seule valeur du corpus synthétique y apparaît.
+
+      Ce que le sas ne fait pas est dit avec la même précision. Il réduit les
+      données personnelles transmises et rend ces flux vérifiables. Il ne
+      garantit ni une anonymisation parfaite, ni une conformité automatique :
+      aucun détecteur n'atteint 100 % de rappel, la ré-identification par
+      faisceau d'indices reste possible, et l'outil assiste le responsable de
+      traitement sans remplacer le DPO, l'analyse d'impact ni le registre.
+
+      Périmètre de la version 0.1 : zone de confiance mono-utilisateur, écoute
+      sur la boucle locale, sans authentification. Toute exposition au-delà est
+      un choix de déploiement à encadrer, documenté comme tel.
+    features:
+      - Proxy compatible OpenAI vers tout backend configurable (Ollama local, Infomaniak, Scaleway)
+      - Détection des identifiants français validés par leur clé de contrôle
+      - Reconnaissance d'entités nommées française CamemBERT via Presidio
+      - Relecture optionnelle par modèle local pour les identifiants indirects
+      - Coffre de correspondances chiffré au repos, compteurs persistants par dossier
+      - Coréférence par dossier entre les pièces d'un même dossier
+      - Politique configurable par type d'entité (pseudonymiser, masquer, conserver, revue)
+      - Dépôt de fichiers .txt, .md, .csv, .docx et .pdf textuels, exports pseudonymisés
+      - Interface web minimale avec mode démonstration séparé du mode sérieux
+      - Journal structuré sans donnée personnelle
+    documentation: "https://comptoir-des-signaux.github.io/sas-confiance-ia/"
+
+legal:
+  license: EUPL-1.2
+  repoOwner: Comptoir des Signaux
+
+maintenance:
+  type: internal
+  contacts:
+    - name: Pascal Chevallot
+      affiliation: Comptoir des Signaux
+
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - fr
+
+intendedAudience:
+  countries:
+    - fr
+  scope:
+    - local-authorities
+    - government
