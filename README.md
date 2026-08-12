@@ -68,6 +68,29 @@ Cette propriété n'est pas déclarative, elle est tenue par des tests : un faux
 backend capture le payload HTTP réellement émis, et la suite échoue si une
 valeur de l'oracle synthétique y figure (REQ-001).
 
+## La même chose, sans ligne de commande
+
+![Copie d'écran de l'interface du sas : à gauche le texte d'origine puis sa
+version pseudonymisée, à droite la réponse à ré-identifier puis le texte
+ré-identifié en zone de confiance, et sous les colonnes le compte des types
+détectés puis la table des placeholders avec leurs valeurs.](docs/assets/interface-sas.png)
+
+L'interface web sur `http://127.0.0.1:8787/` reprend la même boucle : coller,
+pseudonymiser, copier vers son assistant d'IA, rapporter la réponse,
+ré-identifier. Le passage vers le modèle reste un geste manuel, ce qui rend
+visible à chaque fois ce qui franchit la limite de la zone de confiance.
+
+Capture produite le 12 août 2026 sur le dossier 1 de
+[`corpus/synthetique/07-conseil-medical.md`](corpus/synthetique/07-conseil-medical.md),
+**document entièrement fictif**, en mode démonstration : les valeurs détectées
+ne s'affichent que dans ce mode, réservé aux données synthétiques, et le bandeau
+le rappelle à l'écran. La zone 3 contient ici le texte protégé lui-même, recopié
+tel quel : c'est la démonstration de recopie ci-dessus, et la zone 4 montre que
+la ré-identification restitue l'original sans qu'aucun modèle ait vu les valeurs.
+
+Reproduire : `docker compose up -d sas`, puis ouvrir l'interface et coller le
+dossier.
+
 ## Ce que le sas garantit (et ne garantit pas)
 
 Le sas **réduit** les données personnelles transmises aux modèles d'IA et rend
