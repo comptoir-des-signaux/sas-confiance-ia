@@ -124,7 +124,7 @@ commun close (lot 16).
 
 ### Ce qui est prouvé, pas déclaré
 
-299 tests automatisés. Pendant la suite, le sas ne parle pas à un vrai modèle
+304 tests automatisés. Pendant la suite, le sas ne parle pas à un vrai modèle
 mais à un faux backend qui enregistre le payload HTTP exact qu'il reçoit : les
 tests échouent si une seule valeur de l'oracle synthétique y apparaît.
 
@@ -147,7 +147,9 @@ tests échouent si une seule valeur de l'oracle synthétique y apparaît.
   CamemBERT (modèle épinglé par révision exacte, rappel et précision
   [mesurés et publiés](docs/eval/evaluation-ner.md)).
 - **Proxy OpenAI-compatible** (REQ-013) : Ollama local, Infomaniak, Scaleway,
-  par simple configuration, sans code spécifique par fournisseur.
+  par simple configuration, sans code spécifique par fournisseur. Le surcoût
+  en jetons de la pseudonymisation est
+  [mesuré et publié](docs/eval/evaluation-jetons.md).
 - **Coréférence par dossier** (REQ-011) : « Jean Dupont » et « M. Dupont »
   reçoivent le même placeholder entre les pièces d'un dossier, et la
   ré-identification restitue la forme la plus complète connue. Un

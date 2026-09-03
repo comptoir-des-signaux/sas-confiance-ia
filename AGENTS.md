@@ -44,6 +44,7 @@ src/sas_confiance_ia/
   ui.py               Interface web minimale (copier-coller, modes sérieux/démo)
   evaluation.py       Évaluation du rappel NER sur corpus synthétique
   evaluation_juge.py  Évaluation du juge LLM sur les canaris
+  evaluation_jetons.py Surcoût en jetons de la pseudonymisation (compteur injecté)
 tests/                200+ tests, tous sur faux backend, aucun appel réseau
 corpus/synthetique/   Corpus 100 % synthétique avec oracle de non-fuite
 docs/specs/           PRD, AI-SPEC, SPEC (REQ-001 à 016), ADR, PLAN, HANDOFF, QUESTIONS

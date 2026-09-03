@@ -59,6 +59,13 @@ ner-repli-spacy = [
 docs = [
   "mkdocs-material>=9.5,<10",
 ]
+# Mesure du surcoût en jetons (docs/eval/evaluation-jetons.md) : tiktoken
+# (MIT, compatible EUPL-1.2). Volontairement hors du socle et hors CI :
+# l'encodage est téléchargé au premier usage, ce qu'aucun test n'a le droit
+# de faire (AGENTS.md, interdiction 1).
+jetons = [
+  "tiktoken>=0.7",
+]
 
 [build-system]
 requires = ["hatchling"]

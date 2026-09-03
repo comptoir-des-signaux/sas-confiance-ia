@@ -52,6 +52,7 @@ nav:
   - Mesures publiées:
       - Évaluation de la détection (NER): eval/evaluation-ner.md
       - Évaluation du juge LLM: eval/evaluation-juge.md
+      - Surcoût en jetons: eval/evaluation-jetons.md
   - Cadrage (transparence):
       - PRD (produit): specs/01-PRD.md
       - AI-SPEC (risques et parades): specs/02-AI-SPEC.md
