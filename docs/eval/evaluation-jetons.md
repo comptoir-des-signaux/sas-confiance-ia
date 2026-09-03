@@ -46,11 +46,20 @@ pseudonymisés, soit +0,9 % sur le texte.** La consigne système ajoute
 
 ## Lecture honnête des chiffres
 
-- **Le vrai surcoût est une constante, pas un pourcentage.** Les 89 jetons de
-  consigne se paient à chaque requête, quelle que soit sa taille. Ils pèsent
-  +2,0 % sur le document de conseil médical (4369 jetons), mais près de
-  **+30 % sur un tour de conversation court** de 300 jetons. Une facture
-  raisonnée se lit donc par tour, pas en moyenne sur un corpus.
+- **Le vrai surcoût est une constante en valeur absolue : 89 jetons.** Ils se
+  paient à chaque requête, quelle que soit sa taille, ce qui rend le
+  pourcentage trompeur dans les deux sens. Mesuré : +1,6 % sur le document de
+  conseil médical (4369 jetons), +26 % à +42 % sur les documents courts du
+  corpus (230 à 350 jetons), et **+541 % sur une question d'une ligne
+  contenant un nom** (17 jetons en clair, 109 facturés). Le pourcentage
+  explose parce que le dénominateur est minuscule, pas parce que la facture
+  s'envole : 89 jetons restent 89 jetons, soit 0,00018 euro sur un modèle
+  facturé 2 euros le million de jetons d'entrée. Une facture se raisonne
+  donc en jetons par requête, jamais en pourcentage moyen.
+- **Une requête sans entité détectée ne paie rien.** La consigne n'est
+  injectée que si un jeton de pseudonymisation part réellement dans le
+  payload (`api.py`). « Que dit la réglementation sur le mi-temps
+  thérapeutique ? » traverse le sas sans un jeton de plus.
 - **Sur le texte lui-même, la pseudonymisation est quasi neutre**, et devient
   favorable sur les documents denses en identifiants : `07-conseil-medical.md`
   perd 21 jetons une fois pseudonymisé. Un NIR en clair coûte 13 jetons,
