@@ -64,6 +64,14 @@ Points d'attention :
   arrêter ou remplacer le conteneur perd toutes les correspondances (les
   placeholders déjà distribués ne seront plus ré-identifiables). Pour
   persister : §5.
+- **Redémarrage automatique** : le service `sas` porte
+  `restart: unless-stopped`, donc il revient seul après un redémarrage du
+  moteur Docker ou de la machine, mais respecte un `docker compose stop`
+  explicite. La politique n'est appliquée qu'à un conteneur créé après
+  l'ajout : sur une instance déjà en marche, `docker compose up -d` la
+  recrée (et un vault en mémoire est perdu à ce moment, d'où l'intérêt de
+  faire les deux réglages ensemble). Vérifier avec
+  `docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' <conteneur>`.
 - `docker compose down` supprime les conteneurs (volumes conservés) ;
   `docker compose down --volumes` supprime AUSSI le volume `donnees`, donc
   un vault persistant qui s'y trouverait : geste volontaire uniquement.

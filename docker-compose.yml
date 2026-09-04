@@ -12,6 +12,12 @@
 services:
   sas:
     build: .
+    # Le sas revient de lui-même après un redémarrage du moteur Docker ou de
+    # la machine ; « unless-stopped » respecte un arrêt explicite de
+    # l'exploitant. Sans cette ligne, une coupure laisse le sas à terre sans
+    # que personne ne le remarque, et un vault en mémoire perd au passage
+    # toutes ses correspondances.
+    restart: unless-stopped
     # Boucle locale par défaut : exposer plus largement est un choix explicite.
     ports:
       - "127.0.0.1:8787:8787"
